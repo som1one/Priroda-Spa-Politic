@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'route_names.dart';
-
-// Импорты экранов будут добавлены позже
-// import '../screens/home/home_screen.dart';
+import '../screens/auth/registration_screen.dart';
 
 class AppRouter {
   static Route<dynamic>? generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case RouteNames.home:
-        // TODO: добавить HomeScreen
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             appBar: AppBar(title: const Text('Home')),
@@ -17,7 +14,6 @@ class AppRouter {
         );
 
       case RouteNames.settings:
-        // TODO: добавить SettingsScreen
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             appBar: AppBar(title: const Text('Settings')),
@@ -26,12 +22,16 @@ class AppRouter {
         );
 
       case RouteNames.profile:
-        // TODO: добавить ProfileScreen
         return MaterialPageRoute(
           builder: (_) => Scaffold(
             appBar: AppBar(title: const Text('Profile')),
             body: const Center(child: Text('Profile Screen')),
           ),
+        );
+
+      case RouteNames.registration:
+        return MaterialPageRoute(
+          builder: (_) => const RegistrationScreen(),
         );
 
       default:
