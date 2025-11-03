@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'route_names.dart';
 import '../screens/auth/registration_screen.dart';
+import '../screens/auth/verify_email_screen.dart';
 
 class AppRouter {
   static Route<dynamic>? generateRoute(RouteSettings settings) {
@@ -32,6 +33,11 @@ class AppRouter {
       case RouteNames.registration:
         return MaterialPageRoute(
           builder: (_) => const RegistrationScreen(),
+        );
+
+      case RouteNames.verifyEmail:
+        return MaterialPageRoute(
+          builder: (_) => const VerifyEmailScreen(),
         );
 
       default:
