@@ -4,5 +4,6 @@ class RouteNames {
   static const String profile = '/profile';
   static const String registration = '/registration';
   static const String verifyEmail = '/verify-email';
+  static const String nameRegistration = '/name-registration';
 }
 

@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     VERIFICATION_CODE_EXPIRE_MINUTES: int = 3
     VERIFICATION_CODE_LENGTH: int = 6
     
+    # Google OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    
     # Pagination
     DEFAULT_PAGE_SIZE: int = 20
     MAX_PAGE_SIZE: int = 100

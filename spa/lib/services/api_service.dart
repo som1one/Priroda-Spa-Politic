@@ -34,8 +34,9 @@ class ApiService {
 
   Future<Map<String, dynamic>> post(
     String endpoint,
-    Map<String, dynamic>? data,
-  ) async {
+    Map<String, dynamic>? data, {
+    bool throwOnError = true,
+  }) async {
     try {
       final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
       final response = await http
@@ -46,9 +47,17 @@ class ApiService {
           )
           .timeout(AppConstants.connectionTimeout);
 
-      return _handleResponse(response);
+      if (throwOnError) {
+        return _handleResponse(response);
+      } else {
+        return _handleResponse(response);
+      }
     } catch (e) {
-      throw Exception('Ошибка POST запроса: $e');
+      if (throwOnError) {
+        throw Exception('Ошибка POST запроса: $e');
+      } else {
+        rethrow;
+      }
     }
   }
 
@@ -87,16 +96,22 @@ class ApiService {
 
   Map<String, dynamic> _handleResponse(http.Response response) {
     final statusCode = response.statusCode;
-    final responseBody = json.decode(response.body);
+    Map<String, dynamic> responseBody;
+    
+    try {
+      responseBody = json.decode(response.body);
+    } catch (e) {
+      responseBody = {'message': response.body};
+    }
 
     if (statusCode >= 200 && statusCode < 300) {
       return responseBody;
     } else if (statusCode == 401) {
-      throw Exception('Не авторизован');
+      throw Exception(responseBody['detail'] ?? responseBody['message'] ?? 'Не авторизован');
     } else if (statusCode == 404) {
-      throw Exception('Ресурс не найден');
+      throw Exception(responseBody['detail'] ?? responseBody['message'] ?? 'Ресурс не найден');
     } else {
-      throw Exception(responseBody['message'] ?? 'Ошибка сервера');
+      throw Exception(responseBody['detail'] ?? responseBody['message'] ?? 'Ошибка сервера');
     }
   }
 }

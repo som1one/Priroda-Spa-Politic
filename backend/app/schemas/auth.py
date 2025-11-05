@@ -44,3 +44,10 @@ class AuthResponse(BaseModel):
     user_id: Optional[int] = None
     code: Optional[str] = None  # Код подтверждения (для разработки)
 
+
+class GoogleLoginRequest(BaseModel):
+    """Схема для входа через Google"""
+    id_token: str
+    email: str
+    name: Optional[str] = None
+    photo_url: Optional[str] = None

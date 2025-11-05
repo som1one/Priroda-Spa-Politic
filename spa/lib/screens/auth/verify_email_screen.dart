@@ -3,7 +3,10 @@ import 'package:flutter/services.dart';
 import '../../routes/route_names.dart';
 
 class VerifyEmailScreen extends StatefulWidget {
-  const VerifyEmailScreen({super.key});
+  final String? email;
+  final String? password;
+  
+  const VerifyEmailScreen({super.key, this.email, this.password});
 
   @override
   State<VerifyEmailScreen> createState() => _VerifyEmailScreenState();
@@ -90,7 +93,13 @@ class _VerifyEmailScreenState extends State<VerifyEmailScreen> {
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
       
-      Navigator.of(context).pushReplacementNamed(RouteNames.home);
+      // Переход на экран ввода имени и фамилии
+      final email = widget.email ?? '';
+      final password = widget.password ?? '';
+      Navigator.of(context).pushReplacementNamed(
+        RouteNames.nameRegistration,
+        arguments: {'email': email, 'password': password},
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email подтвержден'),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../services/auth_service.dart';
+import '../../services/api_service.dart';
 import '../../utils/validators.dart';
 import '../../routes/route_names.dart';
 
@@ -15,14 +16,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   
   bool _isLoading = false;
+  bool _showPassword = false;
   final _authService = AuthService();
 
   @override
   void dispose() {
     _phoneController.dispose();
     _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -35,18 +39,117 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final apiService = ApiService();
+      final email = _emailController.text.trim();
+      final password = _passwordController.text;
 
+      // Проверяем, существует ли пользователь
+      try {
+        final encodedEmail = Uri.encodeComponent(email);
+        final checkResponse = await apiService.get('/auth/check-email?email=$encodedEmail');
+        final userExists = checkResponse['exists'] == true;
+        
+        if (userExists) {
+          // Пользователь существует - проверяем пароль и выполняем вход
+          final success = await _authService.login(email, password);
+          
+          if (!mounted) return;
+          
+          setState(() {
+            _isLoading = false;
+          });
+
+          if (success) {
+            Navigator.of(context).pushReplacementNamed(RouteNames.home);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Вход выполнен успешно'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Неверный пароль'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        } else {
+          // Пользователя не существует - продолжаем регистрацию
+          // Переходим на экран подтверждения email
+          if (!mounted) return;
+          
+          setState(() {
+            _isLoading = false;
+          });
+
+          Navigator.of(context).pushNamed(
+            RouteNames.verifyEmail,
+            arguments: {'email': email, 'password': password},
+          );
+        }
+      } catch (e) {
+        // Ошибка при проверке
+        if (!mounted) return;
+        
+        setState(() {
+          _isLoading = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Ошибка: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleGoogleLogin() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final success = await _authService.signInWithGoogle();
+    
     setState(() {
       _isLoading = false;
     });
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacementNamed(RouteNames.home);
-  }
-
-  void _handleGoogleLogin() {
+    if (success) {
+      Navigator.of(context).pushReplacementNamed(RouteNames.home);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Вход через Google выполнен успешно'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Ошибка входа через Google'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   void _handleAppleLogin() {
@@ -210,6 +313,82 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                   validator: Validators.validateEmail,
+                  autocorrect: false,
+                ),
+                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Пароль',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF212121),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: !_showPassword,
+                  decoration: InputDecoration(
+                    hintText: 'Введите пароль',
+                    hintStyle: TextStyle(
+                      color: const Color(0xFFBDBDBD),
+                      fontSize: 16,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.lock_outline,
+                      color: const Color(0xFF757575),
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _showPassword ? Icons.visibility : Icons.visibility_off,
+                        color: const Color(0xFF757575),
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _showPassword = !_showPassword;
+                        });
+                      },
+                    ),
+                    filled: true,
+                    fillColor: const Color(0xFFF5F5F5),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: const Color(0xFFE0E0E0),
+                        width: 1,
+                      ),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: const Color(0xFFE0E0E0),
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: const Color(0xFF8B5A3C),
+                        width: 2,
+                      ),
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide(
+                        color: Colors.red,
+                        width: 1,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                  ),
+                  keyboardType: TextInputType.visiblePassword,
+                  validator: Validators.validatePassword,
                   autocorrect: false,
                 ),
                 const SizedBox(height: 32),
