@@ -26,6 +26,12 @@ class AppTextStyles {
     height: 1.4,
   );
   
+  static const TextStyle heading4 = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+  );
+  
   // Текст
   static const TextStyle bodyLarge = TextStyle(
     fontSize: 16,

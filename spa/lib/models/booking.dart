@@ -39,6 +39,11 @@ class Booking {
     return status != 'cancelled' && status != 'completed';
   }
 
+  // Геттер для проверки, создана ли запись через YClients
+  bool get isFromYClients {
+    return notes != null && notes!.contains('YClients');
+  }
+
   factory Booking.fromJson(Map<String, dynamic> json) {
     return Booking(
       id: json['id'] is int ? json['id'] : int.parse(json['id'].toString()),

@@ -1,6 +1,11 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import '../utils/constants.dart';
+import '../utils/api_exceptions.dart';
+
+// Условный импорт для SocketException (только для мобильных)
+import 'dart:io' if (dart.library.html) 'dart:html' as io;
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -19,100 +24,277 @@ class ApiService {
         if (_token != null) 'Authorization': 'Bearer $_token',
       };
 
-  Future<Map<String, dynamic>> get(String endpoint) async {
-    try {
-      final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
-      final response = await http
-          .get(url, headers: _headers)
-          .timeout(AppConstants.connectionTimeout);
+  Future<dynamic> get(String endpoint, {int maxRetries = 3}) async {
+    return _executeWithRetry(
+      () async {
+        final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
+        final response = await http
+            .get(url, headers: _headers)
+            .timeout(AppConstants.connectionTimeout);
+        return _handleResponse(response);
+      },
+      maxRetries: maxRetries,
+    );
+  }
 
-      return _handleResponse(response);
-    } catch (e) {
-      throw Exception('Ошибка GET запроса: $e');
+  /// Выполнение запроса с автоматическим retry
+  Future<T> _executeWithRetry<T>(
+    Future<T> Function() request, {
+    int maxRetries = 3,
+    Duration retryDelay = const Duration(seconds: 1),
+  }) async {
+    int attempt = 0;
+    Exception? lastException;
+
+    while (attempt < maxRetries) {
+      try {
+        return await request();
+      } on TimeoutException catch (e) {
+        lastException = e;
+        attempt++;
+        if (attempt >= maxRetries) {
+          throw TimeoutException(originalError: e);
+        }
+        await Future.delayed(retryDelay * attempt);
+      } catch (e) {
+        lastException = e is Exception ? e : Exception(e.toString());
+        
+        // Не повторяем для ошибок авторизации и валидации
+        if (e is UnauthorizedException || 
+            e is ForbiddenException || 
+            e is ValidationException) {
+          rethrow;
+        }
+
+        // SocketException доступен только на мобильных платформах
+        if (!kIsWeb) {
+          try {
+            // ignore: avoid_dynamic_calls
+            if (e is io.SocketException) {
+              attempt++;
+              if (attempt >= maxRetries) {
+                throw NetworkException(originalError: e);
+              }
+              await Future.delayed(retryDelay * attempt);
+              continue;
+            }
+          } catch (_) {
+            // Игнорируем, если SocketException недоступен
+          }
+        }
+
+        if (e is http.ClientException) {
+          attempt++;
+          if (attempt >= maxRetries) {
+            throw NetworkException(originalError: e);
+          }
+          await Future.delayed(retryDelay * attempt);
+          continue;
+        }
+
+        if (e is ApiException) rethrow;
+        
+        attempt++;
+        if (attempt >= maxRetries) {
+          throw _mapToApiException(e);
+        }
+        await Future.delayed(retryDelay * attempt);
+      }
     }
+
+    throw lastException ?? UnknownException(message: 'Неизвестная ошибка');
   }
 
   Future<Map<String, dynamic>> post(
     String endpoint,
     Map<String, dynamic>? data, {
     bool throwOnError = true,
+    int maxRetries = 3,
   }) async {
-    try {
-      final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
-      final response = await http
-          .post(
-            url,
-            headers: _headers,
-            body: data != null ? jsonEncode(data) : null,
-          )
-          .timeout(AppConstants.connectionTimeout);
+    return _executeWithRetry(
+      () async {
+        final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
+        final response = await http
+            .post(
+              url,
+              headers: _headers,
+              body: data != null ? jsonEncode(data) : null,
+            )
+            .timeout(AppConstants.connectionTimeout);
 
-      if (throwOnError) {
-        return _handleResponse(response);
-      } else {
-        return _handleResponse(response);
-      }
-    } catch (e) {
-      if (throwOnError) {
-        throw Exception('Ошибка POST запроса: $e');
-      } else {
-        rethrow;
-      }
-    }
+        try {
+          return _handleResponse(response);
+        } catch (e) {
+          if (!throwOnError) {
+            // При throwOnError=false возвращаем ответ даже при ошибке
+            dynamic responseBody;
+            try {
+              responseBody = response.body.isNotEmpty 
+                  ? json.decode(response.body) 
+                  : {'message': 'Пустой ответ'};
+            } catch (_) {
+              responseBody = {'message': response.body.isNotEmpty ? response.body : 'Ошибка парсинга'};
+            }
+            return responseBody;
+          }
+          rethrow;
+        }
+      },
+      maxRetries: maxRetries,
+    );
   }
 
   Future<Map<String, dynamic>> put(
     String endpoint,
-    Map<String, dynamic>? data,
-  ) async {
-    try {
-      final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
-      final response = await http
-          .put(
-            url,
-            headers: _headers,
-            body: data != null ? jsonEncode(data) : null,
-          )
-          .timeout(AppConstants.connectionTimeout);
-
-      return _handleResponse(response);
-    } catch (e) {
-      throw Exception('Ошибка PUT запроса: $e');
-    }
+    Map<String, dynamic>? data, {
+    int maxRetries = 3,
+  }) async {
+    return _executeWithRetry(
+      () async {
+        final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
+        final response = await http
+            .put(
+              url,
+              headers: _headers,
+              body: data != null ? jsonEncode(data) : null,
+            )
+            .timeout(AppConstants.connectionTimeout);
+        return _handleResponse(response);
+      },
+      maxRetries: maxRetries,
+    );
   }
 
-  Future<Map<String, dynamic>> delete(String endpoint) async {
-    try {
-      final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
-      final response = await http
-          .delete(url, headers: _headers)
-          .timeout(AppConstants.connectionTimeout);
-
-      return _handleResponse(response);
-    } catch (e) {
-      throw Exception('Ошибка DELETE запроса: $e');
-    }
+  Future<Map<String, dynamic>> patch(
+    String endpoint,
+    Map<String, dynamic>? data, {
+    int maxRetries = 3,
+  }) async {
+    return _executeWithRetry(
+      () async {
+        final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
+        final response = await http
+            .patch(
+              url,
+              headers: _headers,
+              body: data != null ? jsonEncode(data) : null,
+            )
+            .timeout(AppConstants.connectionTimeout);
+        return _handleResponse(response);
+      },
+      maxRetries: maxRetries,
+    );
   }
 
-  Map<String, dynamic> _handleResponse(http.Response response) {
+  Future<Map<String, dynamic>> delete(String endpoint, {int maxRetries = 3}) async {
+    return _executeWithRetry(
+      () async {
+        final url = Uri.parse('${AppConstants.baseUrl}${AppConstants.apiVersion}$endpoint');
+        final response = await http
+            .delete(url, headers: _headers)
+            .timeout(AppConstants.connectionTimeout);
+        return _handleResponse(response);
+      },
+      maxRetries: maxRetries,
+    );
+  }
+
+  dynamic _handleResponse(http.Response response) {
     final statusCode = response.statusCode;
-    Map<String, dynamic> responseBody;
+    dynamic responseBody;
+    
+    // Валидация ответа
+    if (response.body.isEmpty && statusCode >= 200 && statusCode < 300) {
+      return {};
+    }
     
     try {
-      responseBody = json.decode(response.body);
+      if (response.body.isNotEmpty) {
+        responseBody = json.decode(response.body);
+      } else {
+        responseBody = {};
+      }
     } catch (e) {
-      responseBody = {'message': response.body};
+      // Если не JSON, возвращаем текст
+      responseBody = {'message': response.body.isNotEmpty ? response.body : 'Пустой ответ от сервера'};
     }
 
     if (statusCode >= 200 && statusCode < 300) {
       return responseBody;
-    } else if (statusCode == 401) {
-      throw Exception(responseBody['detail'] ?? responseBody['message'] ?? 'Не авторизован');
-    } else if (statusCode == 404) {
-      throw Exception(responseBody['detail'] ?? responseBody['message'] ?? 'Ресурс не найден');
-    } else {
-      throw Exception(responseBody['detail'] ?? responseBody['message'] ?? 'Ошибка сервера');
     }
+
+    // Обработка ошибок по статус кодам
+    String errorMessage = 'Ошибка сервера';
+    Map<String, dynamic>? errors;
+
+    if (responseBody is Map) {
+      errorMessage = responseBody['detail'] ?? 
+                     responseBody['message'] ?? 
+                     responseBody['error'] ?? 
+                     errorMessage;
+      
+      // Извлекаем ошибки валидации
+      if (responseBody['errors'] != null) {
+        errors = responseBody['errors'] as Map<String, dynamic>?;
+      }
+    }
+
+    switch (statusCode) {
+      case 400:
+      case 422:
+        throw ValidationException(
+          message: errorMessage,
+          errors: errors,
+          statusCode: statusCode,
+        );
+      case 401:
+        throw UnauthorizedException(
+          message: errorMessage,
+        );
+      case 403:
+        throw ForbiddenException(
+          message: errorMessage,
+        );
+      case 404:
+        throw NotFoundException(
+          message: errorMessage,
+        );
+      case 500:
+      case 502:
+      case 503:
+      case 504:
+        throw ServerException(
+          message: errorMessage,
+          statusCode: statusCode,
+        );
+      default:
+        throw ServerException(
+          message: errorMessage,
+          statusCode: statusCode,
+        );
+    }
+  }
+
+  /// Преобразует обычные исключения в ApiException
+  ApiException _mapToApiException(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+    
+    if (errorString.contains('timeout')) {
+      return TimeoutException(originalError: error);
+    }
+    
+    if (errorString.contains('socketexception') ||
+        errorString.contains('failed host lookup') ||
+        errorString.contains('network is unreachable') ||
+        errorString.contains('connection refused') ||
+        errorString.contains('connection timed out')) {
+      return NetworkException(originalError: error);
+    }
+    
+    return UnknownException(
+      message: getErrorMessage(error),
+      originalError: error,
+    );
   }
 }
 

@@ -1,9 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
 import 'routes/app_router.dart';
+import 'routes/route_names.dart';
+import 'services/auth_service.dart';
+import 'services/language_service.dart';
 import 'theme/app_theme.dart';
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Locale _locale = LanguageService.defaultLocale;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLocale();
+  }
+
+  Future<void> _loadLocale() async {
+    final locale = await LanguageService().getLocale();
+    if (mounted) {
+      setState(() {
+        _locale = locale;
+      });
+    }
+  }
+
+  void _setLocale(Locale locale) {
+    setState(() {
+      _locale = locale;
+    });
+    LanguageService().setLocale(locale);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,9 +46,58 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.light,
+      locale: _locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ru'),
+        Locale('en'),
+      ],
+      initialRoute: AuthService().isAuthenticated
+          ? RouteNames.home
+          : RouteNames.registration,
       onGenerateRoute: AppRouter.generateRoute,
       debugShowCheckedModeBanner: false,
+      // Включаем поддержку высокой частоты обновления
+      builder: (context, child) {
+        return MediaQuery(
+          // Принудительно устанавливаем частоту обновления для плавности
+          data: MediaQuery.of(context).copyWith(
+            // Поддержка 120 Гц на устройствах с высокой частотой обновления
+            highContrast: false,
+          ),
+          child: LocalizationProvider(
+            locale: _locale,
+            setLocale: _setLocale,
+            child: child ?? const SizedBox(),
+          ),
+        );
+      },
     );
+  }
+}
+
+class LocalizationProvider extends InheritedWidget {
+  final Locale locale;
+  final void Function(Locale) setLocale;
+
+  const LocalizationProvider({
+    required this.locale,
+    required this.setLocale,
+    required super.child,
+  });
+
+  static LocalizationProvider? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<LocalizationProvider>();
+  }
+
+  @override
+  bool updateShouldNotify(LocalizationProvider oldWidget) {
+    return oldWidget.locale != locale;
   }
 }
 

@@ -10,7 +10,22 @@ class RegisterRequest(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     surname: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
-    password: str = Field(..., min_length=6, max_length=100)
+    # bcrypt ограничивает пароль 72 байтами, поэтому ставим потолок 72 символа
+    password: str = Field(..., min_length=6, max_length=72)
+    phone: str = Field(..., min_length=4, max_length=20)
+    code: str = Field(..., min_length=6, max_length=6)
+
+    @validator('phone')
+    def validate_phone(cls, v: str) -> str:
+        cleaned = v.strip()
+        if not cleaned:
+            raise ValueError('Телефон обязателен')
+        if not cleaned.startswith('+'):
+            cleaned = f'+{cleaned}'
+        digits = cleaned.replace('+', '')
+        if not digits.isdigit():
+            raise ValueError('Телефон должен содержать только цифры и +')
+        return cleaned
 
 
 class LoginRequest(BaseModel):
@@ -28,6 +43,12 @@ class VerifyEmailRequest(BaseModel):
 class ResendCodeRequest(BaseModel):
     """Схема для повторной отправки кода"""
     email: EmailStr
+
+
+class RequestCodeRequest(BaseModel):
+    """Схема для запроса кода регистрации"""
+    email: EmailStr
+    phone: str | None = None
 
 
 class TokenResponse(BaseModel):
@@ -51,3 +72,15 @@ class GoogleLoginRequest(BaseModel):
     email: str
     name: Optional[str] = None
     photo_url: Optional[str] = None
+
+
+class VkLoginRequest(BaseModel):
+    """Схема для входа через VK ID"""
+    access_token: str
+    user_id: int
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    photo_url: Optional[str] = None
+
+

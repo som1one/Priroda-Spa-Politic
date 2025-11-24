@@ -11,7 +11,7 @@ class VerificationCode(BaseModel):
     
     email = Column(String(255), index=True, nullable=False)
     code = Column(String(6), nullable=False)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     is_used = Column(Boolean, default=False, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     
