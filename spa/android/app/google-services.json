@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "7382336719",
+    "project_id": "prirodaspa-74540",
+    "storage_bucket": "prirodaspa-74540.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:7382336719:android:b98838e7c83cb8143f63ba",
+        "android_client_info": {
+          "package_name": "com.prirodaspa.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "7382336719-45c766fmger26j5c2gbrgil47a95rf6g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCC8JymziU3p-sgZjpr_6SV24Z_DGMxSAk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "7382336719-45c766fmger26j5c2gbrgil47a95rf6g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
+

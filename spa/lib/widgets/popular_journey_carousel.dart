@@ -1,0 +1,230 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+
+import '../theme/app_colors.dart';
+import '../theme/app_text_styles.dart';
+
+class PopularJourneyCarousel extends StatefulWidget {
+  const PopularJourneyCarousel({super.key});
+
+  @override
+  State<PopularJourneyCarousel> createState() => _PopularJourneyCarouselState();
+}
+
+class _PopularJourneyCarouselState extends State<PopularJourneyCarousel> {
+  final PageController _controller = PageController(viewportFraction: 0.82);
+  int _currentPage = 0;
+  Timer? _autoSlideTimer;
+
+  final List<_JourneyCardData> _journeys = const [
+    _JourneyCardData(
+      imagePath: 'assets/images/Home/journey_hotstones.png',
+      title: 'Тепло камней',
+      subtitle: 'Баланс энергии и глубокое расслабление тела.',
+    ),
+    _JourneyCardData(
+      imagePath: 'assets/images/Home/journey_face_care.png',
+      title: 'Ритуал лица',
+      subtitle: 'Деликатный уход за кожей с эффектом сияния.',
+    ),
+    _JourneyCardData(
+      imagePath: 'assets/images/Home/journey_relax.png',
+      title: 'Косметология',
+      subtitle: 'Косметология для сияния и абсолютного релакса.',
+    ),
+  ];
+
+  @override
+  void dispose() {
+    _autoSlideTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _startAutoSlide();
+  }
+
+  void _startAutoSlide() {
+    _autoSlideTimer?.cancel();
+    _autoSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || _journeys.isEmpty) return;
+      int nextPage = (_currentPage + 1) % _journeys.length;
+      _controller.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 500),
+        // Используем более плавную кривую для 120 Гц
+        curve: Curves.easeInOutCubic,
+      );
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Text(
+            'Популярные SPA-путешествия',
+            style: AppTextStyles.heading3.copyWith(
+              fontFamily: 'Inter24',
+              fontSize: 20,
+              height: 28 / 20,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 240,
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: _journeys.length,
+            // Используем более плавную физику для 120 Гц
+            physics: const ClampingScrollPhysics(
+              parent: BouncingScrollPhysics(),
+            ),
+            onPageChanged: (index) {
+              setState(() => _currentPage = index);
+              _startAutoSlide();
+            },
+            itemBuilder: (context, index) {
+              final journey = _journeys[index];
+              return RepaintBoundary(
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: index == 0 ? 8 : 4,
+                    right: index == _journeys.length - 1 ? 8 : 4,
+                  ),
+                  child: _JourneyCard(data: journey),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            _journeys.length,
+            (index) => RepaintBoundary(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                width: _currentPage == index ? 18 : 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _currentPage == index
+                      ? AppColors.buttonPrimary
+                      : AppColors.buttonPrimary.withOpacity(0.25),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _JourneyCardData {
+  final String imagePath;
+  final String title;
+  final String subtitle;
+
+  const _JourneyCardData({
+    required this.imagePath,
+    required this.title,
+    required this.subtitle,
+  });
+}
+
+class _JourneyCard extends StatelessWidget {
+  final _JourneyCardData data;
+
+  const _JourneyCard({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    return RepaintBoundary(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                data.imagePath,
+                fit: BoxFit.cover,
+                // Кешируем изображение для плавности
+                cacheWidth: (MediaQuery.of(context).size.width * 0.82 * MediaQuery.of(context).devicePixelRatio).round(),
+              ),
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0),
+                      Colors.black.withOpacity(0.65),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 24,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      data.title,
+                      style: AppTextStyles.heading3.copyWith(
+                        fontFamily: 'Inter24',
+                        fontSize: 22,
+                        height: 28 / 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      data.subtitle,
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        fontFamily: 'Inter18',
+                        fontSize: 14,
+                        height: 20 / 14,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
