@@ -12,6 +12,8 @@ import NotificationsPage from './pages/NotificationsPage';
 import LoyaltyPage from './pages/LoyaltyPage';
 import StaffPage from './pages/StaffPage';
 import CustomContentPage from './pages/CustomContentPage';
+import BookingsPage from './pages/BookingsPage';
+import CancelledBookingsPage from './pages/CancelledBookingsPage';
 
 const App = () => (
   <Routes>
@@ -26,7 +28,8 @@ const App = () => (
       )}
     >
       <Route index element={<DashboardPage />} />
-      {/* Заглушки под будущие разделы */}
+      <Route path="bookings" element={<BookingsPage />} />
+      <Route path="bookings/cancelled" element={<CancelledBookingsPage />} />
       <Route path="menu" element={<MenuPage />} />
       <Route path="users" element={<UsersPage />} />
       <Route path="invites" element={<InvitesPage />} />

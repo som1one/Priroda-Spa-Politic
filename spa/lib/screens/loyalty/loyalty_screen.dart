@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../services/loyalty_service.dart';
@@ -20,6 +21,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   bool _isLoading = true;
   bool _useLoyaltyPoints = false;
   String? _error;
+  final NumberFormat _rubFormatter = NumberFormat.decimalPattern('ru');
 
   @override
   void initState() {
@@ -66,6 +68,42 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     }
   }
 
+  // Получить градиент для уровня на основе цветов приложения
+  LinearGradient _getLevelGradient(int levelNum) {
+    switch (levelNum) {
+      case 1:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 2:
+        return LinearGradient(
+          colors: [AppColors.primaryLight, AppColors.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 3:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 4:
+        return LinearGradient(
+          colors: [AppColors.primaryDark, AppColors.primaryDarker],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      default:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+    }
+  }
+  
   Color _parseColor(String hex) {
     try {
       return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
@@ -249,7 +287,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            '${_getLevelNumber(info.currentBonuses)} уровень',
+            // Показываем уровень так, как его вернул бэкенд (имя уровня)
+            'Уровень ${info.currentLevel?.name ?? "0"}',
             style: AppTextStyles.heading2.copyWith(
               color: AppColors.textPrimary,
               fontWeight: FontWeight.w700,
@@ -261,34 +300,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
   }
 
   Widget _buildLevelsTimeline(LoyaltyInfo info) {
-    // Статическая лестница уровней как на референсе
-    final levels = [
-      {
-        'label': '1 уровень',
-        'cashback': '+3%',
-        'description': 'кэшбэк на spa\nпроцедуры',
-        'threshold': 'потратить сумму от 30000',
-      },
-      {
-        'label': '2 уровень',
-        'cashback': '+5%',
-        'description': 'кэшбэк на spa\nпроцедуры',
-        'threshold': 'потратить сумму от 100000',
-      },
-      {
-        'label': '3 уровень',
-        'cashback': '+7%',
-        'description': 'кэшбэк на spa\nпроцедуры',
-        'threshold': 'потратить сумму от 200000',
-      },
-      {
-        'label': '4 уровень',
-        'cashback': '+10%',
-        'description': 'кэшбэк на spa\nпроцедуры',
-        'threshold': 'потратить сумму от 300000',
-      },
-    ];
-
+    final levels = _buildTimelineLevels(info);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -344,7 +356,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                     child: Column(
                       children: [
                         Text(
-                          level['label'] as String,
+                          level.title,
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
                             fontWeight: FontWeight.w600,
@@ -363,7 +376,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                           child: Column(
                             children: [
                               Text(
-                                level['cashback'] as String,
+                                '+${level.cashbackPercent}%',
                                 style: AppTextStyles.heading3.copyWith(
                                   color: AppColors.buttonPrimary,
                                   fontWeight: FontWeight.w700,
@@ -371,7 +384,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                level['description'] as String,
+                                'кэшбэк на spa\nпроцедуры',
                                 textAlign: TextAlign.center,
                                 style: AppTextStyles.bodySmall.copyWith(
                                   color: AppColors.textSecondary,
@@ -383,7 +396,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          level['threshold'] as String,
+                          'Потратить сумму от ${_formatRub(level.threshold)}',
                           textAlign: TextAlign.center,
                           style: AppTextStyles.bodySmall.copyWith(
                             color: AppColors.textSecondary,
@@ -402,13 +415,15 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     );
   }
 
-  int _getLevelNumber(int bonuses) {
-    if (bonuses < 100) return 0;
-    if (bonuses < 500) return 1;
-    if (bonuses < 1000) return 2;
-    return 3;
+  int _getLevelNumber(int rubles) {
+    // Определяем уровень на основе потраченных рублей (minBonuses - это рубли)
+    // Уровень 1: 0-29999, Уровень 2: 30000-99999, Уровень 3: 100000-199999, Уровень 4: 200000+
+    if (rubles < 30000) return 1;
+    if (rubles < 100000) return 2;
+    if (rubles < 200000) return 3;
+    return 4;
   }
-
+  
   Widget _buildCurrentLevelCard(LoyaltyInfo info) {
     final level = info.currentLevel;
     final nextLevel = info.nextLevel;
@@ -449,13 +464,12 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       );
     }
 
-    final gradient = LinearGradient(
-      colors: [
-        _parseColor(level.colorStart),
-        _parseColor(level.colorEnd),
-      ],
-    );
-    final levelColor = _parseColor(level.colorStart);
+    // Используем цвета из AppColors для градиента.
+    // Берём номер уровня из имени (\"0\"..\"4\"), иначе считаем по потраченным рублям (minBonuses).
+    final levelName = level.name;
+    final levelNum = int.tryParse(levelName) ?? _getLevelNumber(level.minBonuses);
+    final gradient = _getLevelGradient(levelNum);
+    final levelColor = AppColors.buttonPrimary;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -491,7 +505,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  level.name,
+                  'Уровень $levelName',
                   style: AppTextStyles.heading3.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -507,7 +521,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
                 if (nextLevel != null) ...[
                   const SizedBox(height: 4),
                   Text(
-                    'Ваш путь к ${nextLevel.name}!',
+                    'Ваш путь к Уровню ${nextLevel.name}!',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: Colors.white.withOpacity(0.8),
                     ),
@@ -529,7 +543,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       return const SizedBox.shrink();
     }
 
-    final levelColor = _parseColor(currentLevel.colorStart);
+    final levelColor = AppColors.buttonPrimary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,7 +558,8 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
               ),
             ),
             Text(
-              nextLevel.name,
+              // Показываем целевой уровень по имени из бэкенда
+              'Уровень ${nextLevel.name}',
               style: AppTextStyles.bodyMedium.copyWith(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -572,7 +587,9 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
             ),
             const SizedBox(width: 6),
             Text(
-              'Ещё ${info.bonusesToNext} бонусов до "${nextLevel.name}"',
+              info.bonusesToNext <= 0
+                  ? 'Максимальный уровень достигнут'
+                  : 'Потратить ещё ${_formatRub(info.bonusesToNext)} до Уровня ${nextLevel.name}',
               style: AppTextStyles.bodySmall.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -723,4 +740,42 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
       ),
     );
   }
+
+  String _formatRub(int amount) => '${_rubFormatter.format(amount)} ₽';
+
+  List<_TimelineLevel> _buildTimelineLevels(LoyaltyInfo info) {
+    final dynamicLevels = info.levels.where((level) => level.isActive).toList()
+      ..sort((a, b) => a.minBonuses.compareTo(b.minBonuses));
+
+    if (dynamicLevels.isNotEmpty) {
+      return dynamicLevels
+          .map(
+            (level) => _TimelineLevel(
+              title: level.name,
+              cashbackPercent: level.cashbackPercent,
+              threshold: level.minBonuses,
+            ),
+          )
+          .toList();
+    }
+
+    return [
+      const _TimelineLevel(title: 'Уровень 1', cashbackPercent: 3, threshold: 30000),
+      const _TimelineLevel(title: 'Уровень 2', cashbackPercent: 5, threshold: 100000),
+      const _TimelineLevel(title: 'Уровень 3', cashbackPercent: 7, threshold: 200000),
+      const _TimelineLevel(title: 'Уровень 4', cashbackPercent: 10, threshold: 300000),
+    ];
+  }
+}
+
+class _TimelineLevel {
+  final String title;
+  final int cashbackPercent;
+  final int threshold;
+
+  const _TimelineLevel({
+    required this.title,
+    required this.cashbackPercent,
+    required this.threshold,
+  });
 }

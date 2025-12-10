@@ -4,6 +4,7 @@ class Booking {
   final String serviceName;
   final int? serviceDuration; // в минутах
   final int? servicePrice; // в копейках
+  final String? masterName;
   final DateTime appointmentDateTime;
   final String status; // pending, confirmed, completed, cancelled
   final String? notes;
@@ -19,6 +20,7 @@ class Booking {
     required this.serviceName,
     this.serviceDuration,
     this.servicePrice,
+    this.masterName,
     required this.appointmentDateTime,
     required this.status,
     this.notes,
@@ -53,6 +55,7 @@ class Booking {
       serviceName: json['service_name'] as String,
       serviceDuration: json['service_duration'] as int?,
       servicePrice: json['service_price'] as int?,
+      masterName: json['master_name'] as String?,
       appointmentDateTime: DateTime.parse(json['appointment_datetime'] as String),
       status: json['status'] as String,
       notes: json['notes'] as String?,
@@ -73,6 +76,7 @@ class Booking {
       'service_name': serviceName,
       'service_duration': serviceDuration,
       'service_price': servicePrice,
+      'master_name': masterName,
       'appointment_datetime': appointmentDateTime.toIso8601String(),
       'status': status,
       'notes': notes,
@@ -90,6 +94,7 @@ class Booking {
     String? serviceName,
     int? serviceDuration,
     int? servicePrice,
+    String? masterName,
     DateTime? appointmentDateTime,
     String? status,
     String? notes,
@@ -105,6 +110,7 @@ class Booking {
       serviceName: serviceName ?? this.serviceName,
       serviceDuration: serviceDuration ?? this.serviceDuration,
       servicePrice: servicePrice ?? this.servicePrice,
+      masterName: masterName ?? this.masterName,
       appointmentDateTime: appointmentDateTime ?? this.appointmentDateTime,
       status: status ?? this.status,
       notes: notes ?? this.notes,

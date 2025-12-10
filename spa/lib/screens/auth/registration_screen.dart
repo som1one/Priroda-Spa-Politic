@@ -7,7 +7,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/validators.dart';
 import '../../utils/constants.dart';
-import 'vk_auth_screen.dart';
+// import 'vk_auth_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -110,10 +110,11 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
           if (!mounted) return;
 
-          final requested = await _requestVerificationCode(apiService, email, phone);
-          if (!requested) {
-            return;
-          }
+          // ЗАКОММЕНТИРОВАНО: запрос кода больше не нужен, сразу переходим к вводу имени
+          // final requested = await _requestVerificationCode(apiService, email, phone);
+          // if (!requested) {
+          //   return;
+          // }
 
           if (!mounted) return;
 
@@ -162,34 +163,34 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     }
   }
 
-  Future<void> _handleVkLogin() async {
-    if (!mounted) return;
-    
-    // VK App ID из констант
-    final vkAppId = AppConstants.vkAppId;
-    final redirectUri = AppConstants.vkRedirectUri;
-    
-    if (vkAppId.isEmpty) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('VK App ID не настроен. Обратитесь к администратору.'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-      return;
-    }
-    
-    // Открываем экран авторизации VK
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => VkAuthScreen(
-          vkAppId: vkAppId,
-          redirectUri: redirectUri,
-        ),
-      ),
-    );
-  }
+    // Future<void> _handleVkLogin() async {
+  //   if (!mounted) return;
+  //   
+  //   // VK App ID из констант
+  //   final vkAppId = AppConstants.vkAppId;
+  //   final redirectUri = AppConstants.vkRedirectUri;
+  //   
+  //   if (vkAppId.isEmpty) {
+  //     if (!mounted) return;
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       const SnackBar(
+  //         content: Text('VK App ID не настроен. Обратитесь к администратору.'),
+  //         backgroundColor: AppColors.error,
+  //       ),
+  //     );
+  //     return;
+  //   }
+  //   
+  //   // Открываем экран авторизации VK
+  //   await Navigator.of(context).push(
+  //     MaterialPageRoute(
+  //       builder: (context) => VkAuthScreen(
+  //         vkAppId: vkAppId,
+  //         redirectUri: redirectUri,
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Future<bool> _requestVerificationCode(
     ApiService apiService,
@@ -552,44 +553,44 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                                 ),
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              color: const Color(0xFFDEE1E6),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Text(
-                            'или',
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              fontFamily: 'Inter24',
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Container(
-                              height: 1,
-                              color: const Color(0xFFDEE1E6),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      _SocialButton(
-                        label: 'Войти с помощью VK',
-                        asset: 'assets/images/Registration/google.svg',
-                        fallbackIcon: Icon(
-                          Icons.group,
-                          color: AppColors.textPrimary,
-                          size: 24,
-                        ),
-                        onPressed: _handleVkLogin,
-                      ),
+                      // const SizedBox(height: 32),
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: Container(
+                      //         height: 1,
+                      //         color: const Color(0xFFDEE1E6),
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Text(
+                      //       'или',
+                      //       style: AppTextStyles.bodyMedium.copyWith(
+                      //         fontFamily: 'Inter24',
+                      //         color: AppColors.textSecondary,
+                      //         fontWeight: FontWeight.w500,
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: Container(
+                      //         height: 1,
+                      //         color: const Color(0xFFDEE1E6),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
+                      // const SizedBox(height: 24),
+                      // _SocialButton(
+                      //   label: 'Войти с помощью VK',
+                      //   asset: 'assets/images/Registration/vk.svg',
+                      //   fallbackIcon: Icon(
+                      //     Icons.group,
+                      //     color: AppColors.textPrimary,
+                      //     size: 24,
+                      //   ),
+                      //   onPressed: _handleVkLogin,
+                      // ),
                       const SizedBox(height: 20),
                       Text(
                         'Продолжая, вы соглашаетесь с условиями сервиса',
@@ -696,7 +697,6 @@ class _SocialButton extends StatelessWidget {
               asset,
               width: 32,
               height: 32,
-              colorFilter: const ColorFilter.mode(AppColors.textPrimary, BlendMode.srcIn),
               placeholderBuilder: (_) => fallbackIcon,
             ),
             const SizedBox(width: 12),

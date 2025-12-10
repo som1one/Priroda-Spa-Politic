@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../l10n/app_localizations.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
@@ -445,7 +446,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          level.name,
+                          'Уровень ${info.currentLevel?.name ?? "0"}',
                           style: AppTextStyles.heading3.copyWith(
                             fontFamily: 'Inter24',
                             color: Colors.white,
@@ -490,7 +491,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   _buildStatItem(
                     'Уровень',
-                    '${_getLevelNumber(info.currentBonuses)}',
+                    '${info.currentLevel?.name ?? "0"}',
                     Icons.trending_up_rounded,
                   ),
                   if (nextLevel != null) ...[
@@ -501,7 +502,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     _buildStatItem(
                       'До след.',
-                      '${info.bonusesToNext}',
+                      '${_formatRub(info.bonusesToNext)}',
                       Icons.flag_rounded,
                     ),
                   ],
@@ -567,73 +568,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // Определить номер уровня на основе потраченных рублей (minBonuses - это рубли)
+  int _getLevelNumber(int rubles) {
+    if (rubles < 30000) return 1;
+    if (rubles < 100000) return 2;
+    if (rubles < 200000) return 3;
+    return 4;
+  }
+  
+  // Форматирование рублей
+  String _formatRub(int amount) {
+    final formatter = NumberFormat.decimalPattern('ru');
+    return '${formatter.format(amount)} ₽';
+  }
+  
+  // Получить градиент для уровня на основе цветов приложения
   LinearGradient _getLoyaltyGradient(LoyaltyInfo info) {
-    final level = info.currentLevel;
-    if (level != null) {
-      return LinearGradient(
-        colors: [
-          _parseLoyaltyColor(level.colorStart),
-          _parseLoyaltyColor(level.colorEnd),
-        ],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    }
+    // Используем номер уровня из имени (0, 1, 2, 3, 4), иначе по minBonuses
+    final levelName = info.currentLevel?.name;
+    final levelNum = levelName != null 
+        ? int.tryParse(levelName) ?? (info.currentLevel != null ? _getLevelNumber(info.currentLevel!.minBonuses) : 0)
+        : 0;
     
-    // Fallback на основе бонусов, если уровень не определён (4 уровня)
-    final bonuses = info.currentBonuses;
-    if (bonuses < 100) {
-      // Бронза
-      return const LinearGradient(
-        colors: [Color(0xFFCD7F32), Color(0xFFA0522D)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else if (bonuses < 500) {
-      // Серебро
-      return const LinearGradient(
-        colors: [Color(0xFFC0C0C0), Color(0xFF808080)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else if (bonuses < 1000) {
-      // Золото
-      return const LinearGradient(
-        colors: [Color(0xFFFFD700), Color(0xFFDAA520)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
-    } else {
-      // Алмаз
-      return const LinearGradient(
-        colors: [Color(0xFFB9F2FF), Color(0xFF4A90E2)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-      );
+    switch (levelNum) {
+      case 1:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 2:
+        return LinearGradient(
+          colors: [AppColors.primaryLight, AppColors.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 3:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 4:
+        return LinearGradient(
+          colors: [AppColors.primaryDark, AppColors.primaryDarker],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      default:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
     }
   }
 
   String _getMetalName(LoyaltyInfo info) {
-    // Если есть уровень из backend — показываем его описание
-    if (info.currentLevel != null) {
-      return '${info.currentLevel!.name}';
-    }
-    
-    // Fallback на основе бонусов (4 статуса)
-    final bonuses = info.currentBonuses;
-    if (bonuses < 100) return 'Бронзовый статус';
-    if (bonuses < 500) return 'Серебряный статус';
-    if (bonuses < 1000) return 'Золотой статус';
-    return 'Алмазный статус';
-  }
-
-  int _getLevelNumber(int bonuses) {
-    // Нумерация уровней без "обсидианового" уровня
-    if (bonuses < 100) return 0;
-    if (bonuses < 500) return 1;
-    if (bonuses < 1000) return 2;
-    if (bonuses < 2000) return 3;
-    return 4;
+    // Показываем номер уровня из бэкенда
+    return 'Уровень ${info.currentLevel?.name ?? "0"}';
   }
 
   Widget _buildSectionTitle(String title) {

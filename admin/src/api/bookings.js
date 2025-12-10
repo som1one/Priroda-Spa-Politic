@@ -28,3 +28,8 @@ export const updateBookingStatus = async (bookingId, payload) => {
   return response.data;
 };
 
+export const confirmBookingPayment = async (bookingId, payload) => {
+  const response = await apiClient.post(`/admin/bookings/${bookingId}/confirm-payment`, payload);
+  return response.data;
+};
+

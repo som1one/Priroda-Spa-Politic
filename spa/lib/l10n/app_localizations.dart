@@ -289,6 +289,12 @@ abstract class AppLocalizations {
   /// In ru, this message translates to:
   /// **'Профиль'**
   String get profile;
+
+  /// Лояльность
+  ///
+  /// In ru, this message translates to:
+  /// **'Лояльность'**
+  String get loyalty;
 }
 
 class _AppLocalizationsDelegate

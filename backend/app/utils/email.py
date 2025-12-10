@@ -14,12 +14,26 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+# Жёстко заданные настройки SMTP.
+# ВПИШИ сюда реальные данные (особенно password), тогда почта будет работать
+# даже если .env не подгрузился в контейнер.
+HARDCODED_SMTP = {
+    "hostname": "smtp.gmail.com",
+    "port": 587,
+    "username": "Priroda.eco.spa@gmail.com",
+    "password": "byficbpsqcaasnjc",  # app‑password от Gmail
+    "start_tls": True,
+    "use_tls": False,
+    "sender": "Priroda.eco.spa@gmail.com",
+}
+
+
 def _get_sender_email() -> str:
     """
     Получить адрес отправителя для всех email.
-    Используется один и тот же адрес для кодов верификации и приглашений.
+    Сначала берём из настроек, если нет — из HARDCODED_SMTP.
     """
-    return settings.EMAIL_FROM or settings.EMAIL_USER
+    return settings.EMAIL_FROM or settings.EMAIL_USER or HARDCODED_SMTP["sender"]
 
 
 def _resolve_recipient(email: str) -> tuple[str, str]:
@@ -29,46 +43,34 @@ def _resolve_recipient(email: str) -> tuple[str, str]:
     return original, email or settings.EMAIL_USER or settings.EMAIL_FROM
 
 
-def _validate_email_settings() -> None:
-    """Валидация настроек email перед отправкой"""
-    if not settings.EMAIL_USER:
-        raise ValueError("EMAIL_USER не установлен в настройках. Проверьте .env файл.")
-    if not settings.EMAIL_PASSWORD:
-        raise ValueError("EMAIL_PASSWORD не установлен в настройках. Проверьте .env файл.")
-    if not settings.EMAIL_HOST:
-        raise ValueError("EMAIL_HOST не установлен в настройках. Проверьте .env файл.")
-
-
 def _get_smtp_settings() -> dict:
     """
-    Получить правильные настройки SMTP в зависимости от порта.
-    Для Gmail:
-    - Порт 587: start_tls=True, use_tls=False
-    - Порт 465: start_tls=False, use_tls=True
+    Получить настройки SMTP.
+    1) Берём из .env (если заданы).
+    2) Если чего‑то не хватает — добиваем HARDCODED_SMTP (не падаем).
     """
-    _validate_email_settings()
-    
-    use_tls = False
-    start_tls = False
-    
-    if settings.EMAIL_PORT == 587:
-        # Порт 587 использует STARTTLS
+    hostname = settings.EMAIL_HOST or HARDCODED_SMTP["hostname"]
+    port = settings.EMAIL_PORT or HARDCODED_SMTP["port"]
+    username = settings.EMAIL_USER or HARDCODED_SMTP["username"]
+    password = settings.EMAIL_PASSWORD or HARDCODED_SMTP["password"]
+
+    # Логика TLS: если порт стандартный 587/465 — настраиваем автоматически,
+    # иначе берём из настроек или хардкода.
+    if port == 587:
         start_tls = True
         use_tls = False
-    elif settings.EMAIL_PORT == 465:
-        # Порт 465 использует SSL/TLS
-        use_tls = True
+    elif port == 465:
         start_tls = False
+        use_tls = True
     else:
-        # Для других портов используем настройки из конфига
-        start_tls = settings.EMAIL_USE_TLS
-        use_tls = settings.EMAIL_USE_SSL
-    
+        start_tls = settings.EMAIL_USE_TLS or HARDCODED_SMTP["start_tls"]
+        use_tls = settings.EMAIL_USE_SSL or HARDCODED_SMTP["use_tls"]
+
     return {
-        "hostname": settings.EMAIL_HOST,
-        "port": settings.EMAIL_PORT,
-        "username": settings.EMAIL_USER,
-        "password": settings.EMAIL_PASSWORD,
+        "hostname": hostname,
+        "port": port,
+        "username": username,
+        "password": password,
         "start_tls": start_tls,
         "use_tls": use_tls,
         "sender": _get_sender_email(),

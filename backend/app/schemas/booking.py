@@ -27,8 +27,8 @@ class BookingCreate(BaseModel):
     @validator('appointment_datetime')
     def validate_future_datetime(cls, v):
         """Проверка, что дата в будущем"""
-        from datetime import timezone
-        if v <= datetime.now(timezone.utc):
+        from app.utils.timezone import moscow_now
+        if v <= moscow_now():
             raise ValueError('Дата записи должна быть в будущем')
         return v
 
@@ -47,8 +47,8 @@ class BookingUpdate(BaseModel):
     @validator('appointment_datetime')
     def validate_future_datetime(cls, v):
         """Проверка, что дата в будущем"""
-        from datetime import timezone
-        if v is not None and v <= datetime.now(timezone.utc):
+        from app.utils.timezone import moscow_now
+        if v is not None and v <= moscow_now():
             raise ValueError('Дата записи должна быть в будущем')
         return v
 

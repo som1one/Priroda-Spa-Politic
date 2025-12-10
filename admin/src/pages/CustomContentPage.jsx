@@ -14,6 +14,7 @@ import {
   message,
   ColorPicker,
 } from 'antd';
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import {
   fetchCustomContentBlocks,
@@ -30,6 +31,17 @@ const blockTypeOptions = [
 ];
 
 const CustomContentPage = () => {
+  const { user } = useAuth();
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять кастомным контентом могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
   const [blocks, setBlocks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);

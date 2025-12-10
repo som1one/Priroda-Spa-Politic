@@ -1,53 +1,62 @@
-import httpx
 import asyncio
+import os
+import sys
+
+import httpx
 
 BASE_URL = "https://api.yclients.com/api/v1"
-COMPANY_ID = 235564
-PARTNER_TOKEN = "w2n67wn87jecywk2seh4"
-USER_TOKEN = "b305a97a405b29e18fdb9e1eca84dc09"
 
-HEADERS = {
-    "Content-Type": "application/json",
-    "Accept": "application/vnd.api.v2+json",     # 🔥 ОБЯЗАТЕЛЬНО!
-    "Authorization": f"Bearer {PARTNER_TOKEN}",
-    "User-Token": USER_TOKEN,
-}
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, ROOT_DIR)
+
+from app.core.config import settings  # noqa: E402
 
 
-async def get_services():
-    url = f"{BASE_URL}/company/{COMPANY_ID}/services"
-    async with httpx.AsyncClient() as client:
-        r = await client.get(url, headers=HEADERS)
-        print("STATUS:", r.status_code)
-        print(r.text)
-        r.raise_for_status()
-        return r.json()
+def build_headers():
+    missing = []
+    if not settings.YCLIENTS_API_TOKEN:
+        missing.append("YCLIENTS_API_TOKEN")
+    if not settings.YCLIENTS_USER_TOKEN:
+        missing.append("YCLIENTS_USER_TOKEN")
+    if not settings.YCLIENTS_COMPANY_ID:
+        missing.append("YCLIENTS_COMPANY_ID")
+
+    if missing:
+        raise RuntimeError(f"В .env не заполнены переменные: {', '.join(missing)}")
+
+    return {
+        "Content-Type": "application/json",
+        "Accept": "application/vnd.api.v2+json",
+        "Authorization": f"Bearer {settings.YCLIENTS_API_TOKEN}",
+        "User-Token": settings.YCLIENTS_USER_TOKEN,
+    }
 
 
-async def get_staff():
-    url = f"{BASE_URL}/company/{COMPANY_ID}/staff"
-    async with httpx.AsyncClient() as client:
-        r = await client.get(url, headers=HEADERS)
-        print("STATUS:", r.status_code)
-        print(r.text)
-        r.raise_for_status()
-        return r.json()
+async def call(endpoint: str):
+    url = f"{BASE_URL}{endpoint}"
+    headers = build_headers()
+    async with httpx.AsyncClient(timeout=15.0) as client:
+        response = await client.get(url, headers=headers)
+        print(f"[{endpoint}] status={response.status_code}")
+        if response.status_code != 200:
+            print(response.text[:500])
+            response.raise_for_status()
+        return response.json()
 
 
 async def main():
-    print("==============================")
-    print("🔐 ТЕСТ YCLIENTS API (ХАРДКОД)")
-    print("==============================")
+    print("=" * 60)
+    print("🔐 Тест авторизации YClients (env-based)")
+    print("=" * 60)
+    print(f"Компания: {settings.YCLIENTS_COMPANY_ID}")
 
-    print("\n1) Получаем услуги...")
-    services = await get_services()
+    services = await call(f"/company/{settings.YCLIENTS_COMPANY_ID}/services")
+    print(f"Услуг получено: {len(services.get('data', []))}")
 
-    print("\n2) Получаем мастеров...")
-    staff = await get_staff()
+    staff = await call(f"/company/{settings.YCLIENTS_COMPANY_ID}/staff")
+    print(f"Сотрудников получено: {len(staff.get('data', []))}")
 
-    print("\n\nГотово!")
-    print("Услуг:", len(services.get("data", [])))
-    print("Мастеров:", len(staff.get("data", [])))
+    print("\n✅ Авторизация успешно проверена")
 
 
 if __name__ == "__main__":

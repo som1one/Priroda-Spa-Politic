@@ -1,6 +1,6 @@
 import secrets
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from app.core.config import settings
 from app.core.security import get_password_hash, verify_password, create_access_token
 from app.models.admin import Admin, AdminInvite, AdminRole
+from app.utils.timezone import moscow_now
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +51,7 @@ class AdminService:
             )
 
         token = secrets.token_hex(32)
-        expires_at = datetime.now(timezone.utc) + timedelta(minutes=settings.ADMIN_INVITE_EXPIRATION_MINUTES)
+        expires_at = moscow_now() + timedelta(minutes=settings.ADMIN_INVITE_EXPIRATION_MINUTES)
         
         # Проверяем, есть ли уже приглашение для этого email
         invite = db.query(AdminInvite).filter(AdminInvite.email == email).first()
@@ -115,7 +116,7 @@ class AdminService:
         if not invite:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Приглашение не найдено")
         
-        if invite.expires_at < datetime.now(timezone.utc):
+        if invite.expires_at < moscow_now():
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Приглашение истекло")
 
         admin = db.query(Admin).filter(Admin.email == invite.email).first()
@@ -166,7 +167,7 @@ class AdminService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль")
 
         token = create_access_token({"sub": admin.id, "role": admin.role, "scope": "admin"})
-        admin.last_login_at = datetime.now(timezone.utc)
+        admin.last_login_at = moscow_now()
         db.commit()
         return token
 
@@ -189,7 +190,7 @@ class AdminService:
     def invite_status(invite: AdminInvite) -> str:
         if invite.accepted:
             return "accepted"
-        if invite.expires_at < datetime.now(timezone.utc):
+        if invite.expires_at < moscow_now():
             return "expired"
         return "active"
 

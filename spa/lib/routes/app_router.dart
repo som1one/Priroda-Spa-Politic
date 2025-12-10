@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'route_names.dart';
 import 'page_transitions.dart';
 import '../screens/auth/registration_screen.dart';
-import '../screens/auth/verify_email_screen.dart';
+// import '../screens/auth/verify_email_screen.dart'; // Экран верификации почты больше не используется
 import '../screens/auth/name_registration_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -17,6 +17,7 @@ import '../screens/booking/time_selection_screen.dart';
 import '../screens/booking/booking_confirm_screen.dart';
 import '../screens/auth/password_screen.dart';
 import '../screens/bookings/bookings_screen.dart';
+import '../screens/bookings/past_bookings_screen.dart';
 import '../screens/loyalty/loyalty_screen.dart';
 import '../models/service.dart';
 
@@ -154,6 +155,11 @@ class AppRouter {
           page: const LoyaltyScreen(),
         );
 
+      case RouteNames.pastBookings:
+        return SlideRightRoute(
+          page: const PastBookingsScreen(),
+        );
+
       case RouteNames.masterSelection:
         final args = settings.arguments as Map<String, dynamic>?;
         final serviceId = args?['serviceId'] as int?;
@@ -223,38 +229,8 @@ class AppRouter {
           page: const RegistrationScreen(),
         );
 
-      case RouteNames.verifyEmail:
-        final args = settings.arguments as Map<String, dynamic>?;
-        final email = args?['email'] as String?;
-        final password = args?['password'] as String?;
-        final phone = args?['phone'] as String?;
-        final name = args?['name'] as String?;
-        final surname = args?['surname'] as String?;
-        
-        if (email == null || email.isEmpty || 
-            password == null || password.isEmpty ||
-            name == null || name.isEmpty ||
-            surname == null || surname.isEmpty ||
-            phone == null || phone.isEmpty) {
-          return FadeRoute(
-            page: Scaffold(
-              appBar: AppBar(title: const Text('Ошибка')),
-              body: const Center(
-                child: Text('Недостаточно данных для регистрации'),
-              ),
-            ),
-          );
-        }
-        
-        return SlideUpRoute(
-          page: VerifyEmailScreen(
-            email: email,
-            password: password,
-            phone: phone,
-            name: name,
-            surname: surname,
-          ),
-        );
+      // Экран verifyEmail убран: верификация почты отключена, регистрация проходит без кода
+      // case RouteNames.verifyEmail: ...
 
       case RouteNames.nameRegistration:
         final args = settings.arguments as Map<String, dynamic>?;

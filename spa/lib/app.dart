@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'l10n/app_localizations.dart';
 import 'routes/app_router.dart';
 import 'routes/route_names.dart';
@@ -15,19 +16,19 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  Locale _locale = LanguageService.defaultLocale;
+  // По умолчанию русский язык
+  Locale _locale = const Locale('ru');
 
-  @override
-  void initState() {
-    super.initState();
-    _loadLocale();
-  }
 
   Future<void> _loadLocale() async {
     final locale = await LanguageService().getLocale();
+    // Гарантируем, что по умолчанию используется русский
+    final finalLocale = locale.languageCode == 'ru' || locale.languageCode == 'en' 
+        ? locale 
+        : const Locale('ru');
     if (mounted) {
       setState(() {
-        _locale = locale;
+        _locale = finalLocale;
       });
     }
   }
@@ -57,6 +58,20 @@ class _MyAppState extends State<MyApp> {
         Locale('ru'),
         Locale('en'),
       ],
+      // Если система не поддерживает выбранный язык, используем русский
+      localeResolutionCallback: (locale, supportedLocales) {
+        if (locale == null) {
+          return const Locale('ru');
+        }
+        // Проверяем, поддерживается ли локаль
+        for (var supportedLocale in supportedLocales) {
+          if (supportedLocale.languageCode == locale.languageCode) {
+            return supportedLocale;
+          }
+        }
+        // Если не поддерживается, возвращаем русский
+        return const Locale('ru');
+      },
       initialRoute: AuthService().isAuthenticated
           ? RouteNames.home
           : RouteNames.registration,

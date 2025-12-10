@@ -16,14 +16,27 @@ import {
   Typography,
   message,
 } from 'antd';
-import dayjs from 'dayjs';
+import { useAuth } from '../context/AuthContext';
+import dayjs from '../utils/dayjs';
 import { useEffect, useMemo, useState } from 'react';
+import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons';
 import { fetchUsers } from '../api/users';
 import { fetchBookings } from '../api/bookings';
 import { useDebounce } from '../hooks/useDebounce';
 import { adjustUserLoyalty, getUserByCode } from '../api/loyalty';
 
 const UsersPage = () => {
+  const { user } = useAuth();
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Доступ к управлению пользователями есть только у супер-администраторов.
+        </Typography.Text>
+      </Card>
+    );
+  }
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -43,6 +56,13 @@ const UsersPage = () => {
   const [codeSearchLoading, setCodeSearchLoading] = useState(false);
   const [codeSearchForm] = Form.useForm();
   const [codeSearchResult, setCodeSearchResult] = useState(null);
+  const watchedServices = Form.useWatch('services', codeSearchForm) || [];
+  // Расчет бонусов для начисления: сумма услуг * процент кэшбэка уровня
+  const servicesTotal = watchedServices
+    .filter((service) => service?.service_name && service?.price_rub)
+    .reduce((sum, service) => sum + Number(service.price_rub || 0), 0);
+  const cashbackPercent = codeSearchResult?.cashback_percent || 3;
+  const bonusesToAward = Math.floor(servicesTotal * cashbackPercent / 100);
 
   const loadUserBookings = async (userId) => {
     try {
@@ -122,18 +142,68 @@ const UsersPage = () => {
     
     try {
       setAdjustLoading(true);
-      const bonusesToSpend = parseInt(values.bonuses_delta);
-      if (bonusesToSpend <= 0) {
-        message.error('Количество бонусов должно быть положительным числом');
+      const services = (values.services || []).filter(
+        (service) => service?.service_name && service?.price_rub,
+      );
+      const availableBonuses = codeSearchResult.loyalty_bonuses || 0;
+
+      const payload = {};
+      const messages = [];
+
+      // 1. Начисление бонусов за услуги
+      if (services.length > 0) {
+        const normalizedServices = services.map((service) => ({
+          name: service.service_name.trim(),
+          price_rub: Math.round(Number(service.price_rub)),
+        }));
+        const totalCost = normalizedServices.reduce((sum, service) => sum + service.price_rub, 0);
+
+        if (totalCost <= 0) {
+          message.error('Стоимость услуг должна быть больше нуля');
+          return;
+        }
+
+        payload.services = normalizedServices;
+        const cashbackPercent = codeSearchResult.cashback_percent || 3;
+        const bonusesToAward = Math.floor(totalCost * cashbackPercent / 100);
+        messages.push(`Начислено ${bonusesToAward} бонусов (${cashbackPercent}% от ${totalCost} ₽)`);
+      }
+
+      // 2. Списание бонусов (скидка)
+      if (values.bonuses_delta !== undefined && values.bonuses_delta !== null && values.bonuses_delta !== '') {
+        const bonusesToSpend = parseInt(values.bonuses_delta, 10);
+        if (isNaN(bonusesToSpend) || bonusesToSpend <= 0) {
+          message.error('Количество бонусов для списания должно быть больше нуля');
+          return;
+        }
+
+        if (bonusesToSpend > availableBonuses) {
+          message.error(`Недостаточно бонусов. Доступно ${availableBonuses}, требуется ${bonusesToSpend}`);
+          return;
+        }
+
+        payload.bonuses_delta = -bonusesToSpend;
+        messages.push(`Списано ${bonusesToSpend} бонусов (скидка)`);
+      }
+
+      if (!payload.services && !payload.bonuses_delta) {
+        message.error('Укажите услуги для начисления бонусов или количество бонусов для списания');
         return;
       }
+
+      payload.reason = values.reason || (messages.length > 0 ? messages.join(' | ') : undefined);
+
+      const result = await adjustUserLoyalty(codeSearchResult.id, payload);
       
-      await adjustUserLoyalty(codeSearchResult.id, {
-        bonuses_delta: -bonusesToSpend, // Отрицательное значение для списания
-        reason: values.reason || `Списание бонусов по коду ${codeSearchResult.unique_code}`,
-      });
+      const successMessages = [];
+      if (result.bonuses_awarded > 0) {
+        successMessages.push(`Начислено ${result.bonuses_awarded} бонусов`);
+      }
+      if (result.bonuses_spent > 0) {
+        successMessages.push(`Списано ${result.bonuses_spent} бонусов`);
+      }
+      message.success(successMessages.join(' | '));
       
-      message.success(`Списано ${bonusesToSpend} бонусов`);
       setCodeSearchModalOpen(false);
       codeSearchForm.resetFields();
       setCodeSearchResult(null);
@@ -141,7 +211,7 @@ const UsersPage = () => {
       const updatedUser = await getUserByCode(codeSearchResult.unique_code);
       setCodeSearchResult(updatedUser);
     } catch (error) {
-      message.error(error.response?.data?.detail || 'Ошибка при списании бонусов');
+      message.error(error.response?.data?.detail || 'Ошибка при изменении бонусов');
     } finally {
       setAdjustLoading(false);
     }
@@ -194,7 +264,7 @@ const UsersPage = () => {
       title: 'Создан',
       dataIndex: 'created_at',
       sorter: true,
-      render: (value) => dayjs(value).format('DD.MM.YYYY'),
+      render: (value) => value ? dayjs(value).tz('Europe/Moscow').format('DD.MM.YYYY') : '—',
     },
   ], [filters]);
 
@@ -345,7 +415,7 @@ const UsersPage = () => {
                 </Space>
               </Descriptions.Item>
               <Descriptions.Item label="Создан">
-                {dayjs(selectedUser.created_at).format('DD.MM.YYYY HH:mm')}
+                {dayjs(selectedUser.created_at).tz('Europe/Moscow').format('DD.MM.YYYY HH:mm')}
               </Descriptions.Item>
             </Descriptions>
 
@@ -353,8 +423,13 @@ const UsersPage = () => {
               <Button type="primary" onClick={() => setAdjustModalOpen(true)} block>
                 Скорректировать баллы лояльности
               </Button>
-              <Button onClick={() => setCodeSearchModalOpen(true)} block>
-                Списать бонусы по коду
+              <Button 
+                type="default" 
+                onClick={() => setCodeSearchModalOpen(true)} 
+                block
+                style={{ borderColor: '#1890ff', color: '#1890ff' }}
+              >
+                Списать бонусы по коду из профиля
               </Button>
             </Space>
 
@@ -375,7 +450,7 @@ const UsersPage = () => {
                 {
                   title: 'Дата',
                   dataIndex: 'appointment_datetime',
-                  render: (value) => dayjs(value).format('DD MMM HH:mm'),
+                  render: (value) => value ? dayjs(value).tz('Europe/Moscow').format('DD MMM HH:mm') : '—',
                 },
                 {
                   title: 'Статус',
@@ -450,7 +525,7 @@ const UsersPage = () => {
 
       {/* Модальное окно для поиска по коду и списания бонусов */}
       <Modal
-        title="Списать бонусы по коду"
+        title="Списать бонусы по коду пользователя"
         open={codeSearchModalOpen}
         onCancel={() => {
           setCodeSearchModalOpen(false);
@@ -470,7 +545,8 @@ const UsersPage = () => {
               <Form.Item
                 name="code"
                 label="Уникальный код пользователя"
-                rules={[{ required: true, message: 'Введите код' }]}
+                rules={[{ required: true, message: 'Введите код из профиля пользователя' }]}
+                extra="Код можно найти в профиле пользователя в приложении"
               >
                 <Input
                   placeholder="Например: ABC12345"
@@ -478,17 +554,18 @@ const UsersPage = () => {
                   onInput={(e) => {
                     e.target.value = e.target.value.toUpperCase();
                   }}
+                  size="large"
                 />
               </Form.Item>
               <Form.Item>
-                <Button type="primary" htmlType="submit" loading={codeSearchLoading} block>
+                <Button type="primary" htmlType="submit" loading={codeSearchLoading} block size="large">
                   Найти пользователя
                 </Button>
               </Form.Item>
             </>
           ) : (
             <>
-              <Card size="small" style={{ marginBottom: 16 }}>
+              <Card size="small" style={{ marginBottom: 16, backgroundColor: '#f5f5f5' }}>
                 <Descriptions column={1} size="small">
                   <Descriptions.Item label="Имя">
                     {codeSearchResult.name} {codeSearchResult.surname || ''}
@@ -498,25 +575,102 @@ const UsersPage = () => {
                     <Tag color="blue">{codeSearchResult.unique_code}</Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Текущие бонусы">
-                    <strong>{codeSearchResult.loyalty_bonuses || 0} бонусов</strong>
+                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
+                      {codeSearchResult.loyalty_bonuses || 0} бонусов
+                    </span>
                   </Descriptions.Item>
                 </Descriptions>
               </Card>
               <Form.Item
                 name="bonuses_delta"
                 label="Количество бонусов для списания"
+                extra="Это скидка, которую получает пользователь. Можно оставить пустым, если нужно только начислить бонусы за услуги."
                 rules={[
-                  { required: true, message: 'Введите количество бонусов' },
-                  { type: 'number', min: 1, message: 'Минимум 1 бонус' },
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve();
+                      }
+                      if (value <= 0) {
+                        return Promise.reject(new Error('Минимум 1 бонус'));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
                 ]}
               >
                 <InputNumber
                   min={1}
                   max={codeSearchResult.loyalty_bonuses || 0}
                   style={{ width: '100%' }}
-                  placeholder="Сколько бонусов списать?"
+                  placeholder="Сколько бонусов списать (скидка)?"
+                  size="large"
                 />
               </Form.Item>
+              <Form.List name="services">
+                {(fields, { add, remove }) => (
+                  <>
+                    {fields.map((field, index) => (
+                      <Space
+                        key={field.key}
+                        align="baseline"
+                        style={{ width: '100%', marginBottom: 8 }}
+                      >
+                        <Form.Item
+                          {...field}
+                          label={index === 0 ? 'Услуга' : ''}
+                          name={[field.name, 'service_name']}
+                          fieldKey={[field.fieldKey, 'service_name']}
+                          rules={[{ required: true, message: 'Введите название услуги' }]}
+                          style={{ flex: 1 }}
+                        >
+                          <Input placeholder="Например, Массаж спины" />
+                        </Form.Item>
+                        <Form.Item
+                          {...field}
+                          label={index === 0 ? 'Стоимость, ₽' : ''}
+                          name={[field.name, 'price_rub']}
+                          fieldKey={[field.fieldKey, 'price_rub']}
+                          rules={[{ required: true, message: 'Укажите стоимость' }]}
+                        >
+                          <InputNumber
+                            min={1}
+                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')}
+                            parser={(value) => value.replace(/\s/g, '')}
+                            style={{ width: 140 }}
+                          />
+                        </Form.Item>
+                        <Button
+                          type="text"
+                          danger
+                          icon={<MinusCircleOutlined />}
+                          onClick={() => remove(field.name)}
+                        />
+                      </Space>
+                    ))}
+                    <Button
+                      type="dashed"
+                      onClick={() => add()}
+                      block
+                      icon={<PlusOutlined />}
+                      style={{ marginBottom: 8 }}
+                    >
+                      Добавить услугу для начисления бонусов
+                    </Button>
+                    {fields.length > 0 && (
+                      <Typography.Text type="secondary">
+                        Бонусы будут начислены автоматически по проценту уровня пользователя ({cashbackPercent}%).
+                        Поле «Количество бонусов для списания» можно не заполнять, если нужно только начислить.
+                      </Typography.Text>
+                    )}
+                  </>
+                )}
+              </Form.List>
+              {servicesTotal > 0 && (
+                <Typography.Text strong style={{ display: 'block', marginTop: 8, fontSize: '16px', color: '#1890ff' }}>
+                  Итого будет начислено: {bonusesToAward.toLocaleString('ru-RU')} бонусов ({cashbackPercent}% от {servicesTotal.toLocaleString('ru-RU')} ₽)
+                </Typography.Text>
+              )}
               <Form.Item name="reason" label="Причина (опционально)">
                 <Input.TextArea rows={3} placeholder="Например: Скидка на услугу массажа" />
               </Form.Item>
@@ -525,13 +679,15 @@ const UsersPage = () => {
                   <Button
                     onClick={() => {
                       setCodeSearchResult(null);
-                      codeSearchForm.resetFields(['bonuses_delta', 'reason']);
+                      codeSearchForm.resetFields(['bonuses_delta', 'reason', 'services']);
                     }}
                   >
                     Найти другого пользователя
                   </Button>
                   <Button type="primary" htmlType="submit" loading={adjustLoading} block>
-                    Списать бонусы
+                    {servicesTotal > 0 || codeSearchForm.getFieldValue('bonuses_delta') 
+                      ? 'Применить изменения' 
+                      : 'Списать бонусы'}
                   </Button>
                 </Space>
               </Form.Item>

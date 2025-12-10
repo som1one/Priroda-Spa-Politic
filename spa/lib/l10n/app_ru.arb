@@ -132,6 +132,10 @@
   "profile": "Профиль",
   "@profile": {
     "description": "Профиль"
+  },
+  "loyalty": "Лояльность",
+  "@loyalty": {
+    "description": "Лояльность"
   }
 }
 

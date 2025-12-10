@@ -4,7 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request, status
 from sqlalchemy.orm import Session
 
-from app.apis.dependencies import admin_required
+from app.apis.dependencies import admin_required, super_admin_required
 from app.core.database import get_db
 from app.models.service import Service, ServiceCategory
 from app.schemas.service import (
@@ -41,7 +41,7 @@ async def create_category(
     payload: ServiceCategoryCreate,
     http_request: Request,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     if payload.parent_id:
         parent = db.query(ServiceCategory).filter(ServiceCategory.id == payload.parent_id).first()
@@ -72,7 +72,7 @@ async def update_category(
     payload: ServiceCategoryUpdate,
     http_request: Request,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     category = db.query(ServiceCategory).filter(ServiceCategory.id == category_id).first()
     if not category:
@@ -109,7 +109,7 @@ async def delete_category(
     category_id: int,
     http_request: Request,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     category = db.query(ServiceCategory).filter(ServiceCategory.id == category_id).first()
     if not category:
@@ -139,7 +139,7 @@ async def create_service(
     payload: ServiceCreate,
     http_request: Request,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     if payload.category_id:
         category = db.query(ServiceCategory).filter(ServiceCategory.id == payload.category_id).first()
@@ -170,7 +170,7 @@ async def update_service(
     payload: ServiceUpdate,
     http_request: Request,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     service = db.query(Service).filter(Service.id == service_id).first()
     if not service:
@@ -205,7 +205,7 @@ async def delete_service(
     service_id: int,
     http_request: Request,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     service = db.query(Service).filter(Service.id == service_id).first()
     if not service:
@@ -228,7 +228,7 @@ async def delete_service(
 @router.post("/upload")
 async def upload_menu_image(
     file: UploadFile = File(...),
-    _: dict = Depends(admin_required),
+    _: dict = Depends(super_admin_required),
 ):
     url = StorageService.save_menu_image(file)
     logger.info("Загружено изображение меню", extra={"url": url})
@@ -239,7 +239,7 @@ async def upload_menu_image(
 async def reorder_categories(
     payload: CategoryReorderRequest,
     db: Session = Depends(get_db),
-    _: dict = Depends(admin_required),
+    _: dict = Depends(super_admin_required),
 ):
     ids = [item.id for item in payload.items]
     if not ids:
@@ -268,7 +268,7 @@ async def reorder_categories(
 async def reorder_services(
     payload: ServiceReorderRequest,
     db: Session = Depends(get_db),
-    _: dict = Depends(admin_required),
+    _: dict = Depends(super_admin_required),
 ):
     ids = [item.id for item in payload.items]
     if not ids:
@@ -297,7 +297,7 @@ async def reorder_services(
 async def bulk_update_services(
     payload: ServicesBulkUpdateRequest,
     db: Session = Depends(get_db),
-    admin=Depends(admin_required),
+    admin=Depends(super_admin_required),
 ):
     if not payload.ids:
         return

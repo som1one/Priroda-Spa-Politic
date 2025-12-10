@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.booking import BookingStatus
 
@@ -21,6 +21,8 @@ class DashboardSummaryResponse(BaseModel):
     total_bookings: int
     confirmed_bookings: int
     pending_bookings: int
+    completed_bookings: int = 0
+    cancelled_bookings: int = 0
     status_breakdown: List[StatusCount]
     monthly_bookings: List[MonthlyBookings]
 
@@ -34,6 +36,9 @@ class AdminBookingResponse(BaseModel):
     appointment_datetime: datetime
     status: str
     phone: Optional[str]
+    service_price_cents: Optional[int] = None
+    loyalty_bonuses_awarded: Optional[bool] = False
+    loyalty_bonuses_amount: Optional[int] = None
 
 
 class AdminBookingsListResponse(BaseModel):
@@ -44,5 +49,10 @@ class AdminBookingsListResponse(BaseModel):
 class BookingUpdateRequest(BaseModel):
     status: BookingStatus
     notes: Optional[str] = None
+    service_price_cents: Optional[int] = None
+    appointment_datetime: Optional[datetime] = None
 
+
+class BookingPaymentConfirmationRequest(BaseModel):
+    amount_rub: float = Field(..., gt=0)
 

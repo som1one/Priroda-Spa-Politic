@@ -4,6 +4,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/local_booking_service.dart';
 import '../../models/booking.dart';
 import '../../routes/route_names.dart';
 import '../../widgets/app_bottom_nav.dart';
@@ -11,6 +12,7 @@ import '../../widgets/connectivity_wrapper.dart';
 import '../../widgets/skeleton_loader.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/animations.dart';
+import '../../utils/api_exceptions.dart';
 
 class BookingsScreen extends StatefulWidget {
   const BookingsScreen({super.key});
@@ -22,6 +24,7 @@ class BookingsScreen extends StatefulWidget {
 class _BookingsScreenState extends State<BookingsScreen> {
   final _apiService = ApiService();
   final _authService = AuthService();
+  final _localBookingService = LocalBookingService();
   
   List<Booking> _bookings = [];
   bool _isLoading = true;
@@ -58,29 +61,54 @@ class _BookingsScreenState extends State<BookingsScreen> {
     }
 
     try {
-      final token = _authService.token;
-      if (token != null) {
-        _apiService.token = token;
+      // Загружаем записи из API (если доступно)
+      List<Booking> apiBookings = [];
+      try {
+        final token = _authService.token;
+        if (token != null) {
+          _apiService.token = token;
+        }
+
+        final params = <String, String>{};
+        if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
+          params['status'] = _selectedStatus!;
+        }
+
+        final queryString = params.isEmpty 
+            ? '' 
+            : '?${params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}';
+        
+        final response = await _apiService.get('/bookings$queryString');
+        
+        if (response is List) {
+          apiBookings = (response as List)
+              .where((item) => item is Map<String, dynamic>)
+              .map((item) => Booking.fromJson(item as Map<String, dynamic>))
+              .toList();
+        }
+      } catch (e) {
+        // Игнорируем ошибки API
       }
 
-      final params = <String, String>{};
-      if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
-        params['status'] = _selectedStatus!;
-      }
+      // Загружаем локальные записи
+      final localBookingsData = await _localBookingService.getLocalBookings();
+      final localBookings = localBookingsData
+          .map((json) => Booking.fromJson(json))
+          .toList();
 
-      final queryString = params.isEmpty 
-          ? '' 
-          : '?${params.entries.map((e) => '${Uri.encodeComponent(e.key)}=${Uri.encodeComponent(e.value)}').join('&')}';
-      
-      final response = await _apiService.get('/bookings$queryString');
-      
-      List<Booking> bookings = [];
-      if (response is List) {
-        bookings = (response as List)
-            .where((item) => item is Map<String, dynamic>)
-            .map((item) => Booking.fromJson(item as Map<String, dynamic>))
-            .toList();
-      }
+      // Объединяем записи
+      final allBookings = [...apiBookings, ...localBookings];
+
+      // Фильтруем отмененные записи
+      final cancelledIds = await _localBookingService.getCancelledBookingIds();
+      final filteredBookings = allBookings
+          .where((booking) => !cancelledIds.contains(booking.id))
+          .toList();
+
+      // Применяем фильтр по статусу, если выбран
+      final bookings = _selectedStatus != null && _selectedStatus!.isNotEmpty
+          ? filteredBookings.where((b) => b.status == _selectedStatus).toList()
+          : filteredBookings;
 
       if (!mounted) return;
       setState(() {
@@ -144,18 +172,13 @@ class _BookingsScreenState extends State<BookingsScreen> {
     if (confirmed != true) return;
 
     try {
-      final token = _authService.token;
-      if (token != null) {
-        _apiService.token = token;
+      // Отменяем локально (без API)
+      await _localBookingService.cancelBooking(booking.id);
+      
+      // Если это локальная запись (отрицательный ID), удаляем её
+      if (booking.id < 0) {
+        await _localBookingService.deleteLocalBooking(booking.id);
       }
-
-      await _apiService.put(
-        '/bookings/${booking.id}',
-        {
-          'status': 'cancelled',
-          'cancelled_reason': 'Отменено пользователем',
-        },
-      );
 
       if (!mounted) return;
       
@@ -171,7 +194,7 @@ class _BookingsScreenState extends State<BookingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Ошибка при отмене: ${e.toString()}'),
+          content: Text('Ошибка при отмене: ${getErrorMessage(e)}'),
           backgroundColor: AppColors.error,
         ),
       );
@@ -180,8 +203,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   String _getStatusText(String status) {
     switch (status) {
-      case 'pending':
-        return 'Ожидает подтверждения';
       case 'confirmed':
         return 'Подтверждено';
       case 'completed':
@@ -195,8 +216,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
 
   Color _getStatusColor(String status) {
     switch (status) {
-      case 'pending':
-        return AppColors.warning;
       case 'confirmed':
         return AppColors.success;
       case 'completed':
@@ -272,7 +291,6 @@ class _BookingsScreenState extends State<BookingsScreen> {
   Widget _buildStatusFilters() {
     final statuses = [
       {'value': null, 'label': 'Все'},
-      {'value': 'pending', 'label': 'Ожидают'},
       {'value': 'confirmed', 'label': 'Подтверждены'},
       {'value': 'completed', 'label': 'Завершены'},
       {'value': 'cancelled', 'label': 'Отменены'},
@@ -398,6 +416,27 @@ class _BookingsScreenState extends State<BookingsScreen> {
               ),
             ],
           ),
+          if (booking.masterName != null && booking.masterName!.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  Icons.person_outline,
+                  size: 16,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Мастер: ${booking.masterName}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: 12),
           
           // Дата и время

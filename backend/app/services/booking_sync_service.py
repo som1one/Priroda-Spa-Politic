@@ -183,7 +183,8 @@ async def sync_yclients_bookings():
                         notes_parts.append(f"Код клиента: {user.unique_code}")
                     existing_booking.notes = ". ".join(notes_parts)
                     if booking_status == BookingStatus.CANCELLED and not existing_booking.cancelled_at:
-                        existing_booking.cancelled_at = datetime.now()
+                        from app.utils.timezone import moscow_now
+                        existing_booking.cancelled_at = moscow_now()
                     # Начисляем лояльность, если запись завершена
                     try:
                         award_loyalty_for_booking(db, user, existing_booking)
@@ -214,7 +215,8 @@ async def sync_yclients_bookings():
                         notes=". ".join(notes_parts),
                     )
                     if booking_status == BookingStatus.CANCELLED:
-                        new_booking.cancelled_at = datetime.now()
+                        from app.utils.timezone import moscow_now
+                        new_booking.cancelled_at = moscow_now()
                     db.add(new_booking)
                     # Начисляем лояльность, если запись завершена
                     try:

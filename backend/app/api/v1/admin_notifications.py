@@ -85,8 +85,8 @@ async def update_notification_status(
 
     campaign.status = new_status
     if new_status == NotificationStatus.SENT:
-        from datetime import datetime, timezone
-        campaign.sent_at = campaign.sent_at or datetime.now(timezone.utc)
+        from app.utils.timezone import moscow_now
+        campaign.sent_at = campaign.sent_at or moscow_now()
         # Отправляем пуши только если канал включает push
         if campaign.channel in (NotificationChannel.PUSH, NotificationChannel.ALL):
             try:

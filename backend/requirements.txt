@@ -10,6 +10,7 @@ psycopg2-binary==2.9.9
 # Валидация и сериализация
 pydantic==2.5.0
 pydantic-settings==2.1.0
+email-validator==2.1.0.post1
 
 # Аутентификация
 python-jose[cryptography]==3.3.0

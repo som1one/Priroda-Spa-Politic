@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../models/time_slot.dart';
@@ -66,7 +65,6 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
         _isLoadingDays = false;
       });
     } catch (e) {
-      print('❌ Ошибка загрузки доступных дней: $e');
       if (!mounted) return;
       setState(() {
         _isLoadingDays = false;
@@ -85,7 +83,6 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(targetDate);
-      print('🔍 Загрузка слотов для даты: $dateStr, service_id: ${widget.serviceId}, staff_id: ${widget.staffId}');
       
       final slots = await _bookingService.getAvailableTimeSlots(
         serviceId: widget.serviceId,
@@ -93,12 +90,9 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
         dateStr: dateStr,
       );
       
-      print('✅ Получено слотов: ${slots.length}');
-      
       if (!mounted) return;
       
       final filteredSlots = slots.where((slot) => slot.date == dateStr).toList();
-      print('✅ После фильтрации: ${filteredSlots.length} слотов');
       
       setState(() {
         _timeSlots = filteredSlots;
@@ -106,7 +100,6 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
         _selectedDate = targetDate;
       });
     } catch (e) {
-      print('❌ Ошибка загрузки слотов: $e');
       
       if (!mounted) return;
       
@@ -187,8 +180,8 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
               ],
             ),
           ),
-          // Выбор даты (горизонтальный календарь)
-          _buildDateSelector(),
+          // Поле выбора даты
+          _buildDatePickerField(),
           // Список слотов времени
           Expanded(
             child: _isLoading
@@ -208,207 +201,130 @@ class _TimeSelectionScreenState extends State<TimeSelectionScreen> {
     );
   }
 
-  Widget _buildDateSelector() {
+  Widget _buildDatePickerField() {
     final now = DateTime.now();
-    final firstDay = DateTime(now.year, now.month, now.day);
-    final lastDay = firstDay.add(const Duration(days: 60)); // 2 месяца вперед
+    final firstDate = DateTime(now.year, now.month, now.day);
+    final lastDate = firstDate.add(const Duration(days: 365));
+    
+    final weekdays = [
+      'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'
+    ];
+    final months = [
+      'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+      'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ];
+    
+    final dateStr = '${weekdays[_selectedDate.weekday - 1]}, ${_selectedDate.day} ${months[_selectedDate.month - 1]} ${_selectedDate.year}';
     
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-      child: TableCalendar(
-        firstDay: firstDay,
-        lastDay: lastDay,
-        focusedDay: _selectedDate,
-        selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-        onDaySelected: (selectedDay, focusedDay) {
-          if (selectedDay.isBefore(firstDay)) return;
-          _loadTimeSlots(date: selectedDay);
-        },
-        calendarFormat: CalendarFormat.month,
-        locale: 'ru_RU',
-        headerStyle: HeaderStyle(
-          formatButtonVisible: false,
-          titleCentered: true,
-          titleTextStyle: AppTextStyles.heading3.copyWith(
-            fontFamily: 'Inter24',
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Выберите дату',
+            style: AppTextStyles.bodyMedium.copyWith(
+              fontFamily: 'Inter24',
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
+            ),
           ),
-          leftChevronIcon: Icon(
-            Icons.chevron_left,
-            color: AppColors.buttonPrimary,
-            size: 28,
-          ),
-          rightChevronIcon: Icon(
-            Icons.chevron_right,
-            color: AppColors.buttonPrimary,
-            size: 28,
-          ),
-        ),
-        calendarStyle: CalendarStyle(
-          // Стиль для сегодняшнего дня
-          todayDecoration: BoxDecoration(
-            color: AppColors.buttonPrimary.withOpacity(0.2),
-            shape: BoxShape.circle,
-          ),
-          todayTextStyle: AppTextStyles.bodyMedium.copyWith(
-            fontFamily: 'Inter24',
-            color: AppColors.buttonPrimary,
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            height: 1.0,
-          ),
-          // Стиль для выбранного дня
-          selectedDecoration: BoxDecoration(
-            color: AppColors.buttonPrimary,
-            shape: BoxShape.circle,
-          ),
-          selectedTextStyle: AppTextStyles.bodyMedium.copyWith(
-            fontFamily: 'Inter24',
-            color: Colors.white,
-            fontWeight: FontWeight.w700,
-            fontSize: 11,
-            height: 1.0,
-          ),
-          // Стиль для обычных дней
-          defaultTextStyle: AppTextStyles.bodyMedium.copyWith(
-            fontFamily: 'Inter18',
-            color: AppColors.textPrimary,
-            fontSize: 11,
-            height: 1.0,
-          ),
-          // Стиль для выходных
-          weekendTextStyle: AppTextStyles.bodyMedium.copyWith(
-            fontFamily: 'Inter18',
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            height: 1.0,
-          ),
-          // Стиль для дней вне месяца
-          outsideTextStyle: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textMuted,
-            fontSize: 9,
-            height: 1.0,
-          ),
-          // Стиль для недоступных дней
-          disabledTextStyle: AppTextStyles.bodySmall.copyWith(
-            color: AppColors.textMuted.withOpacity(0.4),
-            fontSize: 9,
-            height: 1.0,
-          ),
-          // Отступы - минимальные для предотвращения переполнения
-          cellMargin: const EdgeInsets.all(1),
-          cellPadding: EdgeInsets.zero,
-        ),
-        daysOfWeekStyle: DaysOfWeekStyle(
-          weekdayStyle: AppTextStyles.bodySmall.copyWith(
-            fontFamily: 'Inter18',
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-            height: 1.0,
-          ),
-          weekendStyle: AppTextStyles.bodySmall.copyWith(
-            fontFamily: 'Inter18',
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textSecondary,
-            height: 1.0,
-          ),
-        ),
-        enabledDayPredicate: (day) {
-          // Отключаем прошедшие дни
-          if (day.isBefore(firstDay)) return false;
-          
-          // Если загружаются дни, разрешаем все будущие дни
-          if (_isLoadingDays) return true;
-          
-          // Разрешаем только дни, у которых есть доступные слоты
-          final dateStr = DateFormat('yyyy-MM-dd').format(day);
-          return _availableDays.contains(dateStr);
-        },
-        calendarBuilders: CalendarBuilders(
-          // Кастомный билдер для ячеек с обрезкой
-          defaultBuilder: (context, date, focused) {
-            final dateStr = DateFormat('yyyy-MM-dd').format(date);
-            final hasSlots = _availableDays.contains(dateStr);
-            final isSelected = isSameDay(date, _selectedDate);
-            final isToday = isSameDay(date, DateTime.now());
-            final isDisabled = date.isBefore(DateTime.now().subtract(const Duration(days: 1)));
-            
-            return ClipRect(
-              child: Container(
-                margin: const EdgeInsets.all(1),
-                decoration: BoxDecoration(
-                  color: isSelected 
-                      ? AppColors.buttonPrimary 
-                      : (isToday 
-                          ? AppColors.buttonPrimary.withOpacity(0.2) 
-                          : Colors.transparent),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          '${date.day}',
-                          style: isSelected
-                              ? AppTextStyles.bodyMedium.copyWith(
-                                  fontFamily: 'Inter24',
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 11,
-                                  height: 1.0,
-                                )
-                              : (isToday
-                                  ? AppTextStyles.bodyMedium.copyWith(
-                                      fontFamily: 'Inter24',
-                                      color: AppColors.buttonPrimary,
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                      height: 1.0,
-                                    )
-                                  : (isDisabled
-                                      ? AppTextStyles.bodySmall.copyWith(
-                                          color: AppColors.textMuted.withOpacity(0.4),
-                                          fontSize: 9,
-                                          height: 1.0,
-                                        )
-                                      : AppTextStyles.bodyMedium.copyWith(
-                                          fontFamily: 'Inter18',
-                                          color: AppColors.textPrimary,
-                                          fontSize: 11,
-                                          height: 1.0,
-                                        ))),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () async {
+              final picked = await showDatePicker(
+                context: context,
+                initialDate: _selectedDate,
+                firstDate: firstDate,
+                lastDate: lastDate,
+                locale: const Locale('ru', 'RU'),
+                builder: (context, child) {
+                  return Theme(
+                    data: Theme.of(context).copyWith(
+                      colorScheme: ColorScheme.light(
+                        primary: AppColors.buttonPrimary,
+                        onPrimary: Colors.white,
+                        surface: Colors.white,
+                        onSurface: AppColors.textPrimary,
+                      ),
+                      textButtonTheme: TextButtonThemeData(
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.buttonPrimary,
                         ),
                       ),
-                      if (hasSlots && !isSelected && !isToday)
-                        Container(
-                          width: 3,
-                          height: 3,
-                          margin: const EdgeInsets.only(top: 1),
-                          decoration: BoxDecoration(
-                            color: AppColors.buttonPrimary,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
+                    child: child!,
+                  );
+                },
+              );
+              
+              if (picked != null && picked != _selectedDate) {
+                _loadTimeSlots(date: picked);
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFAFAFB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.buttonPrimary.withOpacity(0.2),
+                  width: 1.5,
                 ),
               ),
-            );
-          },
-          // Помечаем дни с доступными слотами
-          markerBuilder: (context, date, events) {
-            return null; // Используем defaultBuilder вместо markerBuilder
-          },
-        ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.buttonPrimary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.calendar_today_outlined,
+                      color: AppColors.buttonPrimary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          dateStr,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            fontFamily: 'Inter24',
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Нажмите, чтобы выбрать другую дату',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            fontFamily: 'Inter18',
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.textSecondary,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

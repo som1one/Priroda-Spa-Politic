@@ -14,6 +14,7 @@ import {
   Tabs,
   Typography,
 } from 'antd';
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import {
   createStaff,
@@ -46,6 +47,17 @@ const DAYS_OF_WEEK = [
 ];
 
 const StaffPage = () => {
+  const { user } = useAuth();
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять мастерами и расписанием могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
   const [staff, setStaff] = useState([]);
   const [staffLoading, setStaffLoading] = useState(true);
   const [staffModalOpen, setStaffModalOpen] = useState(false);

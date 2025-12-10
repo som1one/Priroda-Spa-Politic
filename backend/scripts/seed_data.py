@@ -22,55 +22,81 @@ from app.models.service import Service, ServiceCategory
 
 
 def create_loyalty_levels(db: Session):
-    """Создать стандартные уровни лояльности"""
+    """Создать стандартные уровни лояльности с именами 0–4.
+
+    Если уровни уже есть – обновляем их параметры, чтобы конфиг всегда был
+    в консистентном состоянии.
+    """
     print("Создание уровней лояльности...")
-    
-    # Приводим уровни к более понятной лестнице: 4 уровня без "обсидианового"
-    # Проценты кэшбэка фиксированные: 1 уровень - 3%, 2 уровень - 5%, 3 уровень - 7%, 4 уровень - 10%
+
     levels_data = [
         {
-            "name": "Бронза",
-            "min_points": 0,
-            "cashback_percent": 3,
-            "color_start": "#CD7F32",
-            "color_end": "#A0522D",
+            "name": "0",
+            "min_bonuses": 0,
+            "cashback_percent": 1,
+            "color_start": "#5A7C4A",  # primary
+            "color_end": "#7A9C6A",    # primaryLight
             "icon": "eco",
             "order_index": 0,
+            "is_active": True,
         },
         {
-            "name": "Серебро",
-            "min_points": 100,
-            "cashback_percent": 5,
-            "color_start": "#C0C0C0",
-            "color_end": "#808080",
-            "icon": "star_outline",
+            "name": "1",
+            "min_bonuses": 30000,
+            "cashback_percent": 3,
+            "color_start": "#5A7C4A",
+            "color_end": "#7A9C6A",
+            "icon": "eco",
             "order_index": 1,
+            "is_active": True,
         },
         {
-            "name": "Золото",
-            "min_points": 500,
-            "cashback_percent": 7,
-            "color_start": "#FFD700",
-            "color_end": "#DAA520",
-            "icon": "card_giftcard",
+            "name": "2",
+            "min_bonuses": 100000,
+            "cashback_percent": 5,
+            "color_start": "#7A9C6A",
+            "color_end": "#5A7C4A",
+            "icon": "eco",
             "order_index": 2,
+            "is_active": True,
         },
         {
-            "name": "Алмаз",
-            "min_points": 1000,
-            "cashback_percent": 10,
-            "color_start": "#B9F2FF",
-            "color_end": "#4A90E2",
-            "icon": "local_offer",
+            "name": "3",
+            "min_bonuses": 200000,
+            "cashback_percent": 7,
+            "color_start": "#5A7C4A",
+            "color_end": "#4A6C3A",
+            "icon": "eco",
             "order_index": 3,
+            "is_active": True,
+        },
+        {
+            "name": "4",
+            "min_bonuses": 300000,
+            "cashback_percent": 10,
+            "color_start": "#4A6C3A",
+            "color_end": "#3A5C2A",
+            "icon": "eco",
+            "order_index": 4,
+            "is_active": True,
         },
     ]
-    
+
+    # Удаляем старые текстовые уровни, если они остались от предыдущих версий
+    legacy_names = ["Бронза", "Серебро", "Золото", "Алмаз", "Обсидиановый"]
+    legacy_levels = (
+        db.query(LoyaltyLevelModel)
+        .filter(LoyaltyLevelModel.name.in_(legacy_names))
+        .all()
+    )
+    for lvl in legacy_levels:
+        print(f"  ✓ Удалён старый уровень: {lvl.name}")
+        db.delete(lvl)
+
     for level_data in levels_data:
-        # Ищем уровень по min_points, чтобы можно было переименовывать уровни
         existing = (
             db.query(LoyaltyLevelModel)
-            .filter(LoyaltyLevelModel.min_points == level_data["min_points"])
+            .filter(LoyaltyLevelModel.name == level_data["name"])
             .first()
         )
         if not existing:
@@ -78,26 +104,14 @@ def create_loyalty_levels(db: Session):
             db.add(level)
             print(f"  ✓ Создан уровень: {level_data['name']}")
         else:
-            # Обновляем существующий уровень (имя, цвета, иконку, порядок, процент кэшбэка)
-            existing.name = level_data["name"]
-            existing.cashback_percent = level_data["cashback_percent"]
-            existing.color_start = level_data["color_start"]
-            existing.color_end = level_data["color_end"]
-            existing.icon = level_data["icon"]
-            existing.order_index = level_data["order_index"]
-            existing.is_active = True
-            print(f"  ✓ Обновлён уровень: {level_data['name']} (кэшбэк: {level_data['cashback_percent']}%)")
-    
-    # Удаляем устаревший обсидиановый уровень, если он есть
-    obsolete_levels = (
-        db.query(LoyaltyLevelModel)
-        .filter(LoyaltyLevelModel.name == "Обсидиановый")
-        .all()
-    )
-    for lvl in obsolete_levels:
-        db.delete(lvl)
-        print("  ✓ Удалён уровень: Обсидиановый")
-    
+            for field, value in level_data.items():
+                setattr(existing, field, value)
+            print(
+                f"  ✓ Обновлён уровень: {level_data['name']} "
+                f"(min_bonuses={level_data['min_bonuses']}, "
+                f"cashback={level_data['cashback_percent']}%)"
+            )
+
     db.commit()
 
 

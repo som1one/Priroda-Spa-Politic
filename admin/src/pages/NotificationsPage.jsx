@@ -12,13 +12,14 @@ import {
   Tag,
   message,
 } from 'antd';
-import dayjs from 'dayjs';
+import dayjs from '../utils/dayjs';
 import { useEffect, useState } from 'react';
 import {
   createNotification,
   fetchNotifications,
   updateNotificationStatus,
 } from '../api/notifications';
+import { useAuth } from '../context/AuthContext';
 
 const statusColors = {
   draft: 'default',
@@ -28,6 +29,17 @@ const statusColors = {
 };
 
 const NotificationsPage = () => {
+  const { user } = useAuth();
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять рассылками и уведомлениями могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -84,7 +96,7 @@ const NotificationsPage = () => {
     {
       title: 'Запланировано',
       dataIndex: 'scheduled_at',
-      render: (value) => (value ? dayjs(value).format('DD MMM HH:mm') : '—'),
+      render: (value) => (value ? dayjs(value).tz('Europe/Moscow').format('DD MMM HH:mm') : '—'),
     },
     {
       title: 'Статус',

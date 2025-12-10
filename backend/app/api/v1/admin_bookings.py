@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
@@ -12,7 +12,10 @@ from app.schemas.admin_dashboard import (
     AdminBookingsListResponse,
     AdminBookingResponse,
     BookingUpdateRequest,
+    BookingPaymentConfirmationRequest,
 )
+from app.services.audit_service import AuditService
+from app.services.loyalty_service import award_loyalty_for_booking
 
 router = APIRouter(prefix="/admin/bookings", tags=["Admin Bookings"])
 logger = logging.getLogger(__name__)
@@ -69,6 +72,9 @@ async def list_bookings(
                 appointment_datetime=booking.appointment_datetime,
                 status=booking.status.value,
                 phone=booking.phone or getattr(booking.user, "phone", None),
+                service_price_cents=booking.service_price,
+                loyalty_bonuses_awarded=booking.loyalty_bonuses_awarded,
+                loyalty_bonuses_amount=booking.loyalty_bonuses_amount,
             )
         )
 
@@ -89,8 +95,59 @@ async def update_booking(
     booking.status = payload.status
     if payload.notes is not None:
         booking.notes = payload.notes
+    if payload.service_price_cents is not None:
+        booking.service_price = payload.service_price_cents
+    if payload.appointment_datetime is not None:
+        booking.appointment_datetime = payload.appointment_datetime
     db.commit()
     db.refresh(booking)
     logger.info("Admin updated booking", extra={"booking_id": booking.id})
+    return AdminBookingResponse.model_validate(booking)
+
+
+@router.post("/{booking_id}/confirm-payment", response_model=AdminBookingResponse)
+async def confirm_booking_payment(
+    booking_id: int,
+    payload: BookingPaymentConfirmationRequest,
+    http_request: Request,
+    db: Session = Depends(get_db),
+    admin=Depends(admin_required),
+):
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Бронь не найдена")
+    if booking.status == BookingStatus.CANCELLED:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Нельзя подтвердить отменённую запись")
+    if booking.loyalty_bonuses_awarded:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Бонусы за эту запись уже начислены")
+
+    amount_cents = int(round(payload.amount_rub * 100))
+    if amount_cents <= 0:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Сумма должна быть больше нуля")
+
+    booking.service_price = amount_cents
+    booking.status = BookingStatus.COMPLETED
+    booking.loyalty_bonuses_awarded = False
+    booking.loyalty_bonuses_amount = None
+
+    award_loyalty_for_booking(db, booking.user, booking)
+
+    db.commit()
+    db.refresh(booking)
+
+    AuditService.log_action(
+        db,
+        admin_id=admin.id,
+        action="confirm_booking_payment",
+        entity="booking",
+        entity_id=booking.id,
+        payload={
+            "amount_rub": payload.amount_rub,
+            "status": booking.status.value,
+            "loyalty_bonuses_awarded": booking.loyalty_bonuses_awarded,
+        },
+        request=http_request,
+    )
+
     return AdminBookingResponse.model_validate(booking)
 

@@ -7,11 +7,13 @@ import {
   Modal,
   Select,
   Space,
+  Switch,
   Table,
   Tag,
   Typography,
   message,
 } from 'antd';
+import { useAuth } from '../context/AuthContext';
 import { useEffect, useMemo, useState } from 'react';
 import {
   createLoyaltyBonus,
@@ -34,6 +36,17 @@ const iconOptions = [
 ];
 
 const LoyaltyPage = () => {
+  const { user } = useAuth();
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Управлять программой лояльности могут только супер-администраторы.
+        </Typography.Text>
+      </Card>
+    );
+  }
   const [levels, setLevels] = useState([]);
   const [levelsLoading, setLevelsLoading] = useState(true);
   const [levelsModalOpen, setLevelsModalOpen] = useState(false);
@@ -101,16 +114,20 @@ const LoyaltyPage = () => {
       formLevel.setFieldsValue({
         name: record.name,
         min_bonuses: record.min_bonuses,
+        cashback_percent: record.cashback_percent,
         color_start: record.color_start,
         color_end: record.color_end,
         icon: record.icon,
         order_index: record.order_index,
+        is_active: record.is_active,
       });
     } else {
       formLevel.resetFields();
       formLevel.setFieldsValue({
         icon: 'eco',
         order_index: 0,
+        cashback_percent: 3,
+        is_active: true,
       });
     }
   };
@@ -166,6 +183,11 @@ const LoyaltyPage = () => {
         title: 'Кэшбэк',
         dataIndex: 'cashback_percent',
         render: (value) => <Tag color="green">{value}%</Tag>,
+      },
+      {
+        title: 'Статус',
+        dataIndex: 'is_active',
+        render: (value) => <Tag color={value ? 'green' : 'red'}>{value ? 'Активен' : 'Скрыт'}</Tag>,
       },
       {
         title: 'Цвет',
@@ -326,6 +348,7 @@ const LoyaltyPage = () => {
     if (settings) {
       formSettings.setFieldsValue({
         points_per_100_rub: settings.points_per_100_rub,
+        loyalty_enabled: settings.loyalty_enabled,
       });
     }
     setSettingsModalOpen(true);
@@ -457,6 +480,13 @@ const LoyaltyPage = () => {
           >
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
+        <Form.Item
+          label="Кэшбэк (%)"
+          name="cashback_percent"
+          rules={[{ required: true, message: 'Укажите процент кэшбэка' }]}
+        >
+          <InputNumber min={0} max={100} style={{ width: '100%' }} />
+        </Form.Item>
           <Form.Item
             label="Цвет градиента (начало)"
             name="color_start"
@@ -483,6 +513,13 @@ const LoyaltyPage = () => {
           >
             <InputNumber min={0} style={{ width: '100%' }} />
           </Form.Item>
+        <Form.Item
+          label="Отображать уровень"
+          name="is_active"
+          valuePropName="checked"
+        >
+          <Switch />
+        </Form.Item>
         </Form>
       </Modal>
 
@@ -512,6 +549,13 @@ const LoyaltyPage = () => {
             extra="Например, 5 — это 5 баллов за каждые 100 рублей стоимости услуги. При записи на услугу 500 ₽ клиент получит 25 баллов."
           >
             <InputNumber min={0} max={100} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="Программа лояльности включена"
+            name="loyalty_enabled"
+            valuePropName="checked"
+          >
+            <Switch />
           </Form.Item>
           <Typography.Text type="warning">
             ⚠️ Настройка сохраняется временно до перезапуска сервера.

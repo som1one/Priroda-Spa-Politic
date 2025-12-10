@@ -5,56 +5,175 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e437bc23-f265-400a-9ed4-c6740fb48355" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/drawable/splash_priroda.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/drawable/splash_prirodaa.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/Spa.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Spa.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/alembic/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/alembic/env.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/endpoints/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/endpoints/auth.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/router.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/router.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/core/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/core/config.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ADMIN_INVITE_DIAGNOSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ADMIN_SPEND_BONUSES_BY_CODE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_FLOW.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_FLOW_DETAILED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_FLOW_EXPLAINED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_PROCESS_DETAILED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_PROCESS_EXPLAINED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_SOLUTIONS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_SYNC_EXPLAINED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/BOOKING_YCLIENTS_FALLBACK_SOLUTIONS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/DEPLOYMENT_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/GOOGLE_SIGNIN_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/GoogleService-Info.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LAUNCH_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/LOYALTY_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/PRODUCTION_READY_CHECKLIST.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/QUICK_START_GOOGLE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROADMAP_FULLSTACK.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ROADMAP_LEARNING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/STAFF_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/VK_ID_QUICK_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/VK_ID_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/WHAT_IS_MISSING.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_ALL_SERVICES.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_API_DOCS_ANALYSIS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_API_IN_INTEGRATIONS.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_API_LOCATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_APP_SETUP_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_BOOKING_SAVE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_BOOKING_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_COMPLETE_SETUP_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_FORM_SETUP.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_INTEGRATION.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_OFFICIAL_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_PARTNER_TOKEN_WHY.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_QUICK_START.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_SETUP_COMPLETE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_SYNC_SETUP_COMPLETE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_TESTING_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_TOKENS_GUIDE.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_TOKEN_FIX.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_WIDGET_ALTERNATIVES.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/YCLIENTS_WIDGET_EXPLAINED.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/App.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/App.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/api/bookings.js" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/api/bookings.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/api/client.js" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/api/client.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/layouts/AdminLayout.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/layouts/AdminLayout.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/AuditPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/AuditPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/BookingsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/BookingsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/CustomContentPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/CustomContentPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/DashboardPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/DashboardPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/InvitesPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/InvitesPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/LoyaltyPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/LoyaltyPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/MenuPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/MenuPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/NotificationsPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/NotificationsPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/StaffPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/StaffPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/admin/src/pages/UsersPage.jsx" beforeDir="false" afterPath="$PROJECT_DIR$/admin/src/pages/UsersPage.jsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/alembic/versions/20250110_01_fix_staff_schedule_day_type.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/alembic/versions/20250110_01_fix_staff_schedule_day_type.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/alembic/versions/20250123_02_create_custom_content_blocks.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/alembic/versions/20250123_02_create_custom_content_blocks.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/admin_bookings.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/admin_bookings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/admin_dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/admin_dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/admin_loyalty.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/admin_loyalty.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/admin_menu.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/admin_menu.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/admin_notifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/admin_notifications.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/booking.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/booking.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/endpoints/bookings.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/endpoints/bookings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/loyalty_public.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/loyalty_public.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/api/v1/yclients.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/api/v1/yclients.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/app/core/security.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/core/security.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/models/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/models/user.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/models/verification_code.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/models/verification_code.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/app/schemas/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/schemas/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/schemas/admin_dashboard.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/schemas/admin_dashboard.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/schemas/admin_users.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/schemas/admin_users.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/schemas/booking.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/schemas/booking.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/schemas/loyalty.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/schemas/loyalty.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/services/admin_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/admin_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/app/services/auth_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/auth_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/services/booking_sync_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/booking_sync_service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/app/services/loyalty_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/services/loyalty_service.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/app/utils/email.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/app/utils/email.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/backend/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/backend/docker-compose.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/env.template" beforeDir="false" afterPath="$PROJECT_DIR$/backend/env.template" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/backend/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/backend/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/check_booking_sync.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/check_day_of_week_type.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/check_migrations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/check_staff_columns.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/check_yclients_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/diagnose_admin_invite.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/seed_data.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/scripts/seed_data.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/setup_webhook_guide.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/setup_yclients_complete.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_admin_invite.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_email.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_email_config.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_registration_flow.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_yclients_auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/backend/scripts/test_yclients_auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_yclients_sync.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_yclients_url.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/backend/scripts/test_yclients_webhook.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/google-services (1).json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/spa/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/android/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/build.gradle.kts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/kotlin/com/example/spa/MainActivity.kt" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/android/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/assets/images/apple_logo.svg.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/assets/images/google_logo.svg.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/drawable-v21/launch_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/drawable-v21/launch_background.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/drawable/launch_background.xml" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/drawable/launch_background.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/values-night/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/values-night/styles.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/android/app/src/main/res/values/styles.xml" beforeDir="false" afterPath="$PROJECT_DIR$/spa/android/app/src/main/res/values/styles.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/assets/images/Registration/email.svg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner.xcodeproj/project.pbxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Base.lproj/LaunchScreen.storyboard" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Base.lproj/LaunchScreen.storyboard" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/ios/Runner/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/spa/ios/Runner/Info.plist" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/app.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/app.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/l10n/app_en.arb" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/l10n/app_en.arb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/l10n/app_localizations.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/l10n/app_localizations.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/l10n/app_localizations_en.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/l10n/app_localizations_en.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/l10n/app_localizations_ru.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/l10n/app_localizations_ru.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/l10n/app_ru.arb" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/l10n/app_ru.arb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/models/booking.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/models/booking.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/models/service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/models/service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/models/user.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/models/user.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/models/loyalty.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/models/loyalty.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/routes/app_router.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/routes/app_router.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/routes/route_names.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/routes/route_names.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/auth/name_registration_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/auth/name_registration_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/screens/auth/registration_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/auth/registration_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/screens/auth/verify_email_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/auth/verify_email_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/auth/vk_auth_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/auth/vk_auth_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/booking/booking_confirm_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/booking/booking_confirm_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/booking/time_selection_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/booking/time_selection_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/booking/yclients_booking_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/booking/yclients_booking_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/bookings/bookings_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/bookings/bookings_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/screens/home/home_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/home/home_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/loyalty/loyalty_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/loyalty/loyalty_screen.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/screens/menu/menu_spa_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/menu/menu_spa_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/screens/profile/profile_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/profile/profile_screen.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/screens/settings/settings_screen.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/screens/settings/settings_screen.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/services/api_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/services/api_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/services/auth_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/services/auth_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/services/storage_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/services/storage_service.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/theme/app_colors.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/theme/app_colors.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/theme/app_text_styles.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/theme/app_text_styles.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/theme/app_theme.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/theme/app_theme.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/services/booking_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/services/booking_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/services/custom_content_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/services/custom_content_service.dart" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/services/push_service.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/services/push_service.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/lib/utils/constants.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/utils/constants.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/utils/helpers.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/utils/helpers.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/lib/utils/validators.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/utils/validators.dart" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/linux/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/spa/linux/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/linux/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/spa/linux/flutter/generated_plugins.cmake" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/macos/Flutter/GeneratedPluginRegistrant.swift" beforeDir="false" afterPath="$PROJECT_DIR$/spa/macos/Flutter/GeneratedPluginRegistrant.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/spa/lib/widgets/app_bottom_nav.dart" beforeDir="false" afterPath="$PROJECT_DIR$/spa/lib/widgets/app_bottom_nav.dart" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/pubspec.lock" beforeDir="false" afterPath="$PROJECT_DIR$/spa/pubspec.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/spa/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/spa/pubspec.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/windows/flutter/generated_plugin_registrant.cc" beforeDir="false" afterPath="$PROJECT_DIR$/spa/windows/flutter/generated_plugin_registrant.cc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/spa/windows/flutter/generated_plugins.cmake" beforeDir="false" afterPath="$PROJECT_DIR$/spa/windows/flutter/generated_plugins.cmake" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -101,13 +220,18 @@
     &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
     &quot;git-widget-placeholder&quot;: &quot;master&quot;,
     &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;D:/PycharmProjects/Spa&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/PycharmProjects/Spa/spa/android/app/src/main/res/drawable&quot;,
     &quot;project.structure.last.edited&quot;: &quot;Project&quot;,
     &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
     &quot;project.structure.side.proportion&quot;: &quot;0.0&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;AndroidSdkUpdater&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\PycharmProjects\Spa\spa\android\app\src\main\res\drawable" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="main" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="Spa" />

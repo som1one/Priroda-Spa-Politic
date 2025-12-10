@@ -105,4 +105,7 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get profile => 'Профиль';
+
+  @override
+  String get loyalty => 'Лояльность';
 }

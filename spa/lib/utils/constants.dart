@@ -2,8 +2,9 @@ class AppConstants {
   // API URLs
   static const String baseUrl = String.fromEnvironment(
     'SERVER_BASE_URL',
-    // Локально по умолчанию бьём в тот же порт, что и сервер: 9002
-    defaultValue: 'http://127.0.0.1:9002',
+    // По умолчанию подключаемся к продовому серверу
+    // При необходимости можно переопределить через --dart-define=SERVER_BASE_URL=...
+    defaultValue: 'http://194.87.187.146:9003',
   );
   static const String apiVersion = String.fromEnvironment(
     'API_VERSION',

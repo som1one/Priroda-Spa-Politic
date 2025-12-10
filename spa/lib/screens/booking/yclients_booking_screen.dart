@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/booking_tracker_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
 import '../../utils/api_exceptions.dart';
@@ -23,8 +24,10 @@ class YClientsBookingScreen extends StatefulWidget {
 class _YClientsBookingScreenState extends State<YClientsBookingScreen> {
   final _apiService = ApiService();
   final _authService = AuthService();
+  final _bookingTracker = BookingTrackerService();
   bool _isLoading = true;
   String? _error;
+  String? _serviceName;
 
   @override
   void initState() {
@@ -51,18 +54,44 @@ class _YClientsBookingScreenState extends State<YClientsBookingScreen> {
       if (response is Map && response.containsKey('widget_url')) {
         final widgetUrl = response['widget_url'] as String;
         
+        // Получаем название услуги для отслеживания
+        final serviceName = widget.service?['name'] as String? ?? 
+                           'Услуга';
+        _serviceName = serviceName;
+        
         if (!mounted) return;
+        
+        // Сохраняем информацию о попытке бронирования
+        await _bookingTracker.setPendingBooking(
+          serviceId: widget.serviceId,
+          serviceName: serviceName,
+        );
         
         // Открываем ссылку в браузере
         final uri = Uri.parse(widgetUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        try {
+          // Пробуем открыть в браузере
+          final launched = await launchUrl(
+            uri,
+            mode: LaunchMode.externalApplication,
+          );
+          
+          if (!launched) {
+            // Если не получилось, пробуем в приложении
+            await launchUrl(
+              uri,
+              mode: LaunchMode.platformDefault,
+            );
+          }
+          
           // Закрываем экран после открытия ссылки
           if (mounted) {
             Navigator.of(context).pop();
           }
-        } else {
-          throw Exception('Не удалось открыть ссылку');
+        } catch (e) {
+          // Если не удалось открыть, очищаем трекер и показываем ошибку
+          await _bookingTracker.clearPendingBooking();
+          throw Exception('Не удалось открыть ссылку: ${e.toString()}');
         }
       } else {
         throw Exception('Неверный формат ответа от сервера');

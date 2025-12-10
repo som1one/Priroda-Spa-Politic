@@ -1,7 +1,8 @@
-import { Card, Input, Select, Space, Table, Tag, message } from 'antd';
-import dayjs from 'dayjs';
+import { Card, Input, Select, Space, Table, Tag, Typography, message } from 'antd';
+import dayjs from '../utils/dayjs';
 import { useEffect, useState } from 'react';
 import { fetchAudit } from '../api/audit';
+import { useAuth } from '../context/AuthContext';
 
 const actionLabels = {
   create_category: 'Создание категории',
@@ -14,6 +15,17 @@ const actionLabels = {
 };
 
 const AuditPage = () => {
+  const { user } = useAuth();
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <Card>
+        <Typography.Text>
+          Журнал действий доступен только супер-администраторам.
+        </Typography.Text>
+      </Card>
+    );
+  }
   const [data, setData] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -46,7 +58,7 @@ const AuditPage = () => {
     {
       title: 'Дата',
       dataIndex: 'executed_at',
-      render: (value) => dayjs(value).format('DD MMM HH:mm'),
+      render: (value) => value ? dayjs(value).tz('Europe/Moscow').format('DD MMM HH:mm') : '—',
     },
     {
       title: 'Админ',

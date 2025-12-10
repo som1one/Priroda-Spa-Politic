@@ -1,20 +1,24 @@
 class LoyaltyLevel {
   final int id;
   final String name;
-  final int minBonuses;  // Минимальное количество бонусов для уровня
+  final int minBonuses; // Минимальная сумма потраченных рублей для уровня (в рублях)
+  final int cashbackPercent;
   final String colorStart;
   final String colorEnd;
   final String icon;
   final int orderIndex;
+  final bool isActive;
 
   LoyaltyLevel({
     required this.id,
     required this.name,
     required this.minBonuses,
+    required this.cashbackPercent,
     required this.colorStart,
     required this.colorEnd,
     required this.icon,
     required this.orderIndex,
+    required this.isActive,
   });
 
   factory LoyaltyLevel.fromJson(Map<String, dynamic> json) {
@@ -22,10 +26,12 @@ class LoyaltyLevel {
       id: json['id'] as int,
       name: json['name'] as String,
       minBonuses: json['min_bonuses'] as int,
+      cashbackPercent: json['cashback_percent'] as int? ?? 0,
       colorStart: json['color_start'] as String,
       colorEnd: json['color_end'] as String,
       icon: json['icon'] as String? ?? 'eco',
       orderIndex: json['order_index'] as int? ?? 0,
+      isActive: json['is_active'] as bool? ?? true,
     );
   }
 }
@@ -60,13 +66,14 @@ class LoyaltyBonus {
 }
 
 class LoyaltyInfo {
-  final int currentBonuses;  // Текущее количество бонусов
-  final int spentBonuses;  // Потраченные бонусы
+  final int currentBonuses; // Текущее количество бонусов
+  final int spentBonuses; // Потраченные бонусы
   final LoyaltyLevel? currentLevel;
   final LoyaltyLevel? nextLevel;
-  final int bonusesToNext;  // Бонусов до следующего уровня
+  final int bonusesToNext; // Рублей до следующего уровня (название поля для совместимости, но содержит рубли)
   final double progress;
   final List<LoyaltyBonus> availableBonuses;
+  final List<LoyaltyLevel> levels;
 
   LoyaltyInfo({
     required this.currentBonuses,
@@ -76,6 +83,7 @@ class LoyaltyInfo {
     required this.bonusesToNext,
     required this.progress,
     required this.availableBonuses,
+    required this.levels,
   });
 
   factory LoyaltyInfo.fromJson(Map<String, dynamic> json) {
@@ -92,6 +100,10 @@ class LoyaltyInfo {
       progress: (json['progress'] as num).toDouble(),
       availableBonuses: (json['available_bonuses'] as List<dynamic>?)
               ?.map((item) => LoyaltyBonus.fromJson(item as Map<String, dynamic>))
+              .toList() ??
+          [],
+      levels: (json['levels'] as List<dynamic>?)
+              ?.map((item) => LoyaltyLevel.fromJson(item as Map<String, dynamic>))
               .toList() ??
           [],
     );

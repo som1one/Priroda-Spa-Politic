@@ -102,6 +102,14 @@ def _fix_invalid_time_ranges() -> None:
 def upgrade() -> None:
     conn = op.get_bind()
     inspector = sa.inspect(conn)
+
+    # Если таблицы staff_schedules нет (например, миграция с её созданием
+    # не входила в текущую ветку БД) — просто пропускаем изменения.
+    existing_tables = inspector.get_table_names()
+    if "staff_schedules" not in existing_tables:
+        print("⚠️ Таблица staff_schedules не найдена, миграция пропущена")
+        return
+
     columns = {col["name"]: col for col in inspector.get_columns("staff_schedules")}
 
     day_column = columns.get("day_of_week")

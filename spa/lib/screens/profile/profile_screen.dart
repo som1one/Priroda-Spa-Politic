@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/image_cache_manager.dart';
@@ -7,6 +9,7 @@ import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/user_service.dart';
 import '../../services/loyalty_service.dart';
+import '../../services/local_booking_service.dart';
 import '../../models/user.dart';
 import '../../models/booking.dart';
 import '../../models/loyalty.dart';
@@ -31,6 +34,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _authService = AuthService();
   final _userService = UserService();
   final _loyaltyService = LoyaltyService();
+  final _localBookingService = LocalBookingService();
   User? _user;
   List<Booking> _bookings = [];
   LoyaltyInfo? _loyaltyInfo;
@@ -45,6 +49,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   bool _hasCheckedInitialRefresh = false;
+  DateTime? _lastBookingUpdate;
 
   @override
   void didChangeDependencies() {
@@ -55,8 +60,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (result is Map && result['refreshBookings'] == true) {
         _loadBookings();
       }
+    } else {
+      // Обновляем записи при возврате на экран (но не слишком часто)
+      final now = DateTime.now();
+      if (_lastBookingUpdate == null || 
+          now.difference(_lastBookingUpdate!).inSeconds > 2) {
+        _lastBookingUpdate = now;
+        _loadBookings();
+      }
     }
   }
+
 
   Future<void> _loadProfile() async {
     setState(() {
@@ -109,25 +123,46 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      final token = _authService.token;
-      if (token != null) {
-        _apiService.token = token;
+      // Загружаем записи из API (если доступно)
+      List<Booking> apiBookings = [];
+      try {
+        final token = _authService.token;
+        if (token != null) {
+          _apiService.token = token;
+        }
+
+        final response = await _apiService.get('/bookings');
+        final List<dynamic> bookingsData = response is List 
+            ? response 
+            : (response['bookings'] as List<dynamic>? ?? []);
+
+        apiBookings = bookingsData
+            .where((json) => json is Map<String, dynamic>)
+            .map((json) => Booking.fromJson(json as Map<String, dynamic>))
+            .toList();
+      } catch (e) {
+        // Игнорируем ошибки API
       }
 
-      final response = await _apiService.get('/bookings');
-      final List<dynamic> bookingsData = response is List 
-          ? response 
-          : (response['bookings'] as List<dynamic>? ?? []);
+      // Загружаем локальные записи
+      final localBookingsData = await _localBookingService.getLocalBookings();
+      final localBookings = localBookingsData
+          .map((json) => Booking.fromJson(json))
+          .toList();
 
-      final bookings = bookingsData
-          .where((json) => json is Map<String, dynamic>)
-          .map((json) => Booking.fromJson(json as Map<String, dynamic>))
+      // Объединяем записи
+      final allBookings = [...apiBookings, ...localBookings];
+
+      // Фильтруем отмененные записи
+      final cancelledIds = await _localBookingService.getCancelledBookingIds();
+      final filteredBookings = allBookings
+          .where((booking) => !cancelledIds.contains(booking.id))
           .toList();
 
       if (!mounted) return;
 
       setState(() {
-        _bookings = bookings;
+        _bookings = filteredBookings;
         _isLoadingBookings = false;
       });
     } catch (e) {
@@ -202,6 +237,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _UpcomingBookingsSection(
                             isLoading: _isLoadingBookings,
                             bookings: _bookings,
+                            onBookingCancelled: () {
+                              _loadBookings();
+                            },
                           ),
                           const SizedBox(height: 24),
                           _QuickLinks(
@@ -432,8 +470,17 @@ class _ProfileHeaderCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         GestureDetector(
                           onTap: () {
-                            // Копируем код в буфер обмена
-                            // TODO: Добавить функционал копирования
+                            final code = user?.uniqueCode;
+                            if (code == null || code.isEmpty) {
+                              return;
+                            }
+                            Clipboard.setData(ClipboardData(text: code));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Код скопирован'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
                           },
                           child: Icon(
                             Icons.copy,
@@ -459,6 +506,56 @@ class _LoyaltyCard extends StatelessWidget {
 
   const _LoyaltyCard({required this.loyaltyInfo});
 
+  // Определить номер уровня на основе потраченных рублей (minBonuses - это рубли)
+  int _getLevelNumber(int rubles) {
+    if (rubles < 30000) return 1;
+    if (rubles < 100000) return 2;
+    if (rubles < 200000) return 3;
+    return 4;
+  }
+  
+  // Форматирование рублей
+  String _formatRub(int amount) {
+    final formatter = NumberFormat.decimalPattern('ru');
+    return '${formatter.format(amount)} ₽';
+  }
+  
+  // Получить градиент для уровня на основе цветов приложения
+  LinearGradient _getLevelGradient(int levelNum) {
+    switch (levelNum) {
+      case 1:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 2:
+        return LinearGradient(
+          colors: [AppColors.primaryLight, AppColors.primary],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 3:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 4:
+        return LinearGradient(
+          colors: [AppColors.primaryDark, AppColors.primaryDarker],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      default:
+        return LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+    }
+  }
+  
   Color _parseColor(String hex) {
     try {
       return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
@@ -477,44 +574,42 @@ class _LoyaltyCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    int bonusesToNext = 0;
-    double progress = 0.0;
-    String statusText = currentLevel.name;
+    // Используем данные из бэкенда (уже рассчитаны по потраченным рублям)
+    final bonusesToNext = loyaltyInfo.bonusesToNext; // Это рубли до следующего уровня
+    final progress = loyaltyInfo.progress;
+    final levelName = currentLevel.name;
+    
+    // Определяем номер уровня из имени (0, 1, 2, 3, 4) или по minBonuses
+    final levelNum = int.tryParse(levelName) ?? _getLevelNumber(currentLevel.minBonuses);
+    
+    String statusText = 'Уровень $levelName';
     String subtitleText = '';
 
-    if (nextLevel != null) {
-      bonusesToNext = nextLevel.minBonuses - currentBonuses;
-      final range = nextLevel.minBonuses - currentLevel.minBonuses;
-      if (range > 0) {
-        progress = ((currentBonuses - currentLevel.minBonuses) / range).clamp(0.0, 1.0);
-      }
-      subtitleText = 'Осталось $bonusesToNext бонусов до следующего уровня.';
-    } else {
-      progress = 1.0;
+    if (nextLevel != null && bonusesToNext > 0) {
+      subtitleText = 'Потратить ещё ${_formatRub(bonusesToNext)} до Уровня ${nextLevel.name}';
+    } else if (nextLevel == null) {
       subtitleText = 'Вы на максимальном уровне';
+    } else {
+      subtitleText = 'Максимальный уровень достигнут';
     }
 
     if (currentLevel == null) {
       return const SizedBox.shrink();
     }
 
-    final levelColorStart = _parseColor(currentLevel.colorStart);
-    final levelColorEnd = _parseColor(currentLevel.colorEnd);
+    // Используем цвета из AppColors для градиента
+    final gradient = _getLevelGradient(levelNum);
 
     return GestureDetector(
       onTap: () => Navigator.of(context).pushNamed(RouteNames.loyalty),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [levelColorStart, levelColorEnd],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          gradient: gradient,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: levelColorStart.withOpacity(0.35),
+              color: AppColors.buttonPrimary.withOpacity(0.35),
               blurRadius: 40,
               offset: const Offset(0, 20),
             ),
@@ -584,19 +679,127 @@ class _LoyaltyCard extends StatelessWidget {
   }
 }
 
-class _UpcomingBookingsSection extends StatelessWidget {
+class _UpcomingBookingsSection extends StatefulWidget {
   final bool isLoading;
   final List<Booking> bookings;
+  final VoidCallback? onBookingCancelled;
 
   const _UpcomingBookingsSection({
     required this.isLoading,
     required this.bookings,
+    this.onBookingCancelled,
   });
 
   @override
+  State<_UpcomingBookingsSection> createState() => _UpcomingBookingsSectionState();
+}
+
+class _UpcomingBookingsSectionState extends State<_UpcomingBookingsSection> {
+  final _apiService = ApiService();
+  final _authService = AuthService();
+  final _localBookingService = LocalBookingService();
+
+  String _formatDateTime(DateTime dateTime) {
+    final months = [
+      'января',
+      'февраля',
+      'марта',
+      'апреля',
+      'мая',
+      'июня',
+      'июля',
+      'августа',
+      'сентября',
+      'октября',
+      'ноября',
+      'декабря',
+    ];
+    return '${dateTime.day} ${months[dateTime.month - 1]} в ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  }
+
+  Future<void> _cancelBooking(Booking booking) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Text(
+          'Отменить бронирование?',
+          style: AppTextStyles.heading3.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Вы уверены, что хотите отменить эту запись?',
+          style: AppTextStyles.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              'Нет',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(
+              'Да, отменить',
+              style: AppTextStyles.bodyLarge.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      // Отменяем локально (без API)
+      await _localBookingService.cancelBooking(booking.id);
+      
+      // Если это локальная запись (отрицательный ID), удаляем её
+      if (booking.id < 0) {
+        await _localBookingService.deleteLocalBooking(booking.id);
+      }
+
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Бронирование отменено'),
+          backgroundColor: AppColors.success,
+        ),
+      );
+
+      // Вызываем callback для обновления списка
+      widget.onBookingCancelled?.call();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при отмене: ${getErrorMessage(e)}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final futureBookings = bookings
-        .where((b) => b.appointmentDateTime.isAfter(DateTime.now()))
+    final futureBookings = widget.bookings
+        .where((b) => b.appointmentDateTime.isAfter(DateTime.now()) && 
+                     b.status != 'cancelled' && 
+                     b.status != 'completed')
         .toList()
       ..sort((a, b) => a.appointmentDateTime.compareTo(b.appointmentDateTime));
 
@@ -608,7 +811,7 @@ class _UpcomingBookingsSection extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: () {
-                if (!isLoading) {
+                if (!widget.isLoading) {
                   Navigator.of(context).pushNamed(RouteNames.bookings);
                 }
               },
@@ -621,7 +824,7 @@ class _UpcomingBookingsSection extends StatelessWidget {
                 ),
               ),
             ),
-            if (!isLoading && futureBookings.isNotEmpty)
+            if (!widget.isLoading && futureBookings.isNotEmpty)
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pushNamed(RouteNames.bookings);
@@ -654,7 +857,7 @@ class _UpcomingBookingsSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        if (isLoading)
+        if (widget.isLoading)
           const Center(
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -703,6 +906,28 @@ class _UpcomingBookingsSection extends StatelessWidget {
                                   fontSize: 16,
                                 ),
                               ),
+                            if (booking.masterName != null &&
+                                booking.masterName!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.person_outline,
+                                    size: 14,
+                                    color: AppColors.textSecondary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      'Мастер: ${booking.masterName}',
+                                      style: AppTextStyles.bodySmall.copyWith(
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                               const SizedBox(height: 6),
                               Text(
                                 _formatDateTime(booking.appointmentDateTime),
@@ -714,7 +939,25 @@ class _UpcomingBookingsSection extends StatelessWidget {
                             ],
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        if (booking.canCancel) ...[
+                          TextButton(
+                            onPressed: () => _cancelBooking(booking),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              minimumSize: Size.zero,
+                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
+                            child: Text(
+                              'Отменить',
+                              style: AppTextStyles.bodySmall.copyWith(
+                                color: AppColors.error,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
                         const Icon(
                           Icons.chevron_right,
                           color: AppColors.textPrimary,
@@ -759,6 +1002,12 @@ class _QuickLinks extends StatelessWidget {
           icon: Icons.settings_outlined,
           title: 'Настройки',
           onTap: onSettings,
+        ),
+        const SizedBox(height: 12),
+        _QuickLinkTile(
+          icon: Icons.history,
+          title: 'Прошедшие записи',
+          onTap: () => Navigator.of(context).pushNamed(RouteNames.pastBookings),
         ),
         const SizedBox(height: 12),
         _QuickLinkTile(

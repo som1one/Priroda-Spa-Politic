@@ -2,8 +2,17 @@
 API endpoints для интеграции с YClients
 """
 import logging
-from fastapi import APIRouter, HTTPException, status
+from typing import Optional
+from datetime import date, datetime, timedelta
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import Session
+from app.core.database import get_db
 from app.core.config import settings
+from app.core.dependencies import get_current_user
+from app.models.user import User
+from app.models.service import Service
+from app.services.yclients_service import yclients_service
+from app.services.loyalty_service import award_loyalty_for_booking
 
 router = APIRouter(prefix="/yclients", tags=["YClients"])
 logger = logging.getLogger(__name__)
@@ -531,7 +540,8 @@ async def yclients_webhook(
                 notes_parts.append(f"Код клиента: {user.unique_code}")
             existing_booking.notes = ". ".join(notes_parts)
             if booking_status == BookingStatus.CANCELLED:
-                existing_booking.cancelled_at = datetime.now()
+                from app.utils.timezone import moscow_now
+                existing_booking.cancelled_at = moscow_now()
             # Начисляем лояльность, если запись завершена
             award_loyalty_for_booking(db, user, existing_booking)
         else:
@@ -552,7 +562,8 @@ async def yclients_webhook(
                 notes=". ".join(notes_parts),
             )
             if booking_status == BookingStatus.CANCELLED:
-                new_booking.cancelled_at = datetime.now()
+                from app.utils.timezone import moscow_now
+                new_booking.cancelled_at = moscow_now()
             db.add(new_booking)
             # Начисляем лояльность, если запись завершена
             award_loyalty_for_booking(db, user, new_booking)

@@ -7,6 +7,7 @@ import {
   Table,
   Tag,
   message,
+  Typography,
 } from 'antd';
 import {
   CopyOutlined,
@@ -14,9 +15,15 @@ import {
   UserAddOutlined,
 } from '@ant-design/icons';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import dayjs from 'dayjs';
+import dayjs from '../utils/dayjs';
 import { createInvite, fetchInvites } from '../api/invites';
 import { useAuth } from '../context/AuthContext';
+
+// В Ant Design v5 нет отдельного экспорта InputGroup,
+// используем дочерний компонент Input.Group
+const InputGroup = Input.Group;
+
+const { Text } = Typography;
 
 const statusTag = (status) => {
   const map = {
@@ -61,7 +68,20 @@ const InvitesPage = () => {
     try {
       setCreating(true);
       const invite = await createInvite(values);
-      message.success('Приглашение отправлено');
+      const inviteLink = buildInviteLink(invite.token);
+      message.success({
+        content: (
+          <div>
+            <div>Приглашение отправлено на {invite.email}</div>
+            <div style={{ marginTop: 8 }}>
+              <Text copyable={{ text: inviteLink }} style={{ fontSize: 12 }}>
+                Ссылка: {inviteLink}
+              </Text>
+            </div>
+          </div>
+        ),
+        duration: 10,
+      });
       form.resetFields();
       setInvites((prev) => [invite, ...prev.filter((item) => item.email !== invite.email)]);
     } catch (error) {
@@ -112,20 +132,29 @@ const InvitesPage = () => {
       title: 'Истекает',
       dataIndex: 'expires_at',
       key: 'expires_at',
-      render: (date) => dayjs(date).format('DD MMM HH:mm'),
+      render: (date) => date ? dayjs(date).tz('Europe/Moscow').format('DD MMM HH:mm') : '—',
     },
     {
-      title: 'Ссылка',
+      title: 'Ссылка приглашения',
       key: 'token',
-      render: (_, record) => (
-        <Button
-          size="small"
-          icon={<CopyOutlined />}
-          onClick={() => handleCopy(record.token)}
-        >
-          Копировать
-        </Button>
-      ),
+      width: 300,
+      render: (_, record) => {
+        const link = buildInviteLink(record.token);
+        return (
+          <InputGroup compact>
+            <Input
+              value={link}
+              readOnly
+              style={{ width: 'calc(100% - 40px)', fontSize: 12 }}
+            />
+            <Button
+              icon={<CopyOutlined />}
+              onClick={() => handleCopy(record.token)}
+              title="Копировать ссылку"
+            />
+          </InputGroup>
+        );
+      },
     },
   ], [handleCopy]);
 

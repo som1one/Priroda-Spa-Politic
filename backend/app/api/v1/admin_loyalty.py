@@ -20,6 +20,8 @@ from app.schemas.loyalty import (
     LoyaltyBonusUpdate,
 )
 from app.services.audit_service import AuditService
+from app.models.booking import Booking, BookingStatus
+from datetime import datetime as dt
 
 router = APIRouter(prefix="/admin/loyalty", tags=["Admin Loyalty"])
 logger = logging.getLogger(__name__)
@@ -49,11 +51,13 @@ async def create_loyalty_level(
 ):
     """Создать уровень лояльности"""
     level_data = payload.model_dump()
-    # cashback_percent устанавливается автоматически и не редактируется через API
-    # При создании нового уровня устанавливаем минимальный процент (3%)
-    if 'cashback_percent' not in level_data:
-        level_data['cashback_percent'] = 3
-    
+    cashback_percent = level_data.get("cashback_percent")
+    if cashback_percent is None or cashback_percent < 0 or cashback_percent > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="cashback_percent должен быть в диапазоне 0-100",
+        )
+
     level = LoyaltyLevel(**level_data)
     db.add(level)
     db.commit()
@@ -86,8 +90,13 @@ async def update_loyalty_level(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Уровень не найден")
     
     update_data = payload.model_dump(exclude_unset=True)
-    # cashback_percent не редактируется через API, исключаем его из обновления
-    update_data.pop('cashback_percent', None)
+    cashback_percent = update_data.get("cashback_percent")
+    if cashback_percent is not None:
+        if cashback_percent < 0 or cashback_percent > 100:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="cashback_percent должен быть в диапазоне 0-100",
+            )
     for field, value in update_data.items():
         setattr(level, field, value)
     
@@ -231,10 +240,17 @@ async def delete_loyalty_bonus(
     )
 
 
+class LoyaltyServiceAward(BaseModel):
+    """Услуга, за которую начисляются бонусы"""
+    name: str
+    price_rub: int
+
+
 class LoyaltyAdjustRequest(BaseModel):
     """Запрос на изменение бонусов пользователя"""
-    bonuses_delta: int
+    bonuses_delta: int | None = None  # Отрицательное значение = списание (скидка)
     reason: str | None = None
+    services: List[LoyaltyServiceAward] | None = None  # Услуги для начисления бонусов
 
 
 @router.post("/users/{user_id}/adjust")
@@ -248,7 +264,11 @@ async def adjust_user_loyalty_bonuses(
     """
     Ручная корректировка бонусов лояльности пользователя из админки.
 
-    Можно как добавить (+N), так и списать (−N) бонусы.
+    Логика:
+    - services: начисление бонусов по проценту уровня пользователя (положительное значение)
+    - bonuses_delta: списание бонусов (отрицательное значение = скидка)
+    - Можно использовать оба одновременно (начислить за услуги и списать скидку)
+    
     При списании бонусов (отрицательное значение) увеличивается spent_bonuses.
     """
     user = db.query(User).filter(User.id == user_id).first()
@@ -256,27 +276,117 @@ async def adjust_user_loyalty_bonuses(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Пользователь не найден")
 
     current_bonuses = user.loyalty_bonuses or 0
-    bonuses_delta = payload.bonuses_delta
-    
+    total_delta = 0
+    reason_parts = []
+    bonuses_awarded = 0
+    bonuses_spent = 0
+
+    # Получаем уровень пользователя для расчета процента кэшбэка (если нужен)
+    from app.services.loyalty_service import _get_user_loyalty_level
+    user_level = _get_user_loyalty_level(db, user)
+    cashback_percent = user_level.cashback_percent if user_level else 1
+
+    # 1. Начисление бонусов за услуги (по проценту уровня)
+    services = payload.services or []
+    if services:
+        # Вычисляем сумму услуг
+        total_services_cost = sum(max(0, service.price_rub) for service in services)
+        if total_services_cost <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Сумма услуг должна быть положительной",
+            )
+        
+        # Вычисляем бонусы по проценту уровня
+        bonuses_to_award = int(total_services_cost * cashback_percent / 100)
+        total_delta += bonuses_to_award
+        bonuses_awarded = bonuses_to_award
+        
+        service_details = ", ".join(f"{service.name} ({service.price_rub} ₽)" for service in services)
+        reason_parts.append(f"Начисление бонусов за услуги: {service_details} (кэшбэк {cashback_percent}% = {bonuses_to_award} бонусов)")
+
+    # 2. Списание бонусов (скидка)
+    if payload.bonuses_delta is not None and payload.bonuses_delta != 0:
+        if payload.bonuses_delta > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="bonuses_delta для списания должно быть отрицательным. Для начисления используйте services.",
+            )
+        total_delta += payload.bonuses_delta
+        bonuses_spent = abs(payload.bonuses_delta)
+        reason_parts.append(f"Списание бонусов: {bonuses_spent} бонусов (скидка)")
+
+    # Проверяем, что есть хотя бы одно действие
+    # Если total_delta == 0, считаем, что изменение не требуется и просто возвращаем текущее состояние
+    if total_delta == 0:
+        return {
+            "success": True,
+            "user_id": user.id,
+            "current_bonuses": current_bonuses,
+            "spent_bonuses": user.spent_bonuses or 0,
+            "bonuses_awarded": 0,
+            "bonuses_spent": 0,
+            "loyalty_level_id": user.loyalty_level_id,
+            "loyalty_level_name": user_level.name if user_level else None,
+            "services": [service.model_dump() for service in services] if services else None,
+        }
+
     # Проверяем, что не списываем больше, чем есть
-    if bonuses_delta < 0 and abs(bonuses_delta) > current_bonuses:
+    if total_delta < 0 and abs(total_delta) > current_bonuses:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Недостаточно бонусов. У пользователя {current_bonuses} бонусов, пытаетесь списать {abs(bonuses_delta)}"
+            detail=f"Недостаточно бонусов. У пользователя {current_bonuses} бонусов, пытаетесь списать {abs(total_delta)}"
         )
-    
-    new_bonuses = max(0, current_bonuses + bonuses_delta)
+
+    # Формируем итоговую причину
+    reason_text = payload.reason or " | ".join(reason_parts)
+
+    # Обновляем бонусы
+    new_bonuses = max(0, current_bonuses + total_delta)
     user.loyalty_bonuses = new_bonuses
     
     # Если списываем бонусы, увеличиваем spent_bonuses
-    if bonuses_delta < 0:
-        user.spent_bonuses = (user.spent_bonuses or 0) + abs(bonuses_delta)
+    if total_delta < 0:
+        user.spent_bonuses = (user.spent_bonuses or 0) + abs(total_delta)
     
+    # При списании/начислении по коду считаем, что услуга завершена,
+    # и создаём запись в bookings, чтобы это учитывалось в прогрессе уровней.
+    if services:
+        total_services_cost = sum(max(0, service.price_rub) for service in services)
+        if total_services_cost > 0:
+            booking = Booking(
+                user_id=user.id,
+                service_name=", ".join(service.name for service in services),
+                service_duration=None,
+                service_price=total_services_cost * 100,  # в копейках
+                from app.utils.timezone import moscow_now
+                appointment_datetime=moscow_now(),
+                status=BookingStatus.COMPLETED,
+                notes=reason_text,
+                phone=user.phone or user.email,
+            )
+            db.add(booking)
+
     # Обновляем уровень лояльности на основе новых бонусов
+    # Важно: делаем flush, чтобы изменения были видны в сессии перед запросом уровня
+    db.flush()
+    
     from app.services.loyalty_service import _get_user_loyalty_level
     new_level = _get_user_loyalty_level(db, user)
     if new_level:
+        old_level_id = user.loyalty_level_id
         user.loyalty_level_id = new_level.id
+        # Логируем изменение уровня для отладки
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(
+            f"Обновление уровня лояльности для пользователя {user.id}: "
+            f"бонусы {current_bonuses} -> {new_bonuses}, "
+            f"уровень {old_level_id} -> {new_level.id} (min_bonuses={new_level.min_bonuses})"
+        )
+    else:
+        # Если уровень не найден, сбрасываем его
+        user.loyalty_level_id = None
 
     db.commit()
     db.refresh(user)
@@ -288,11 +398,12 @@ async def adjust_user_loyalty_bonuses(
         entity="user",
         entity_id=user.id,
         payload={
-            "delta": bonuses_delta,
-            "reason": payload.reason,
+            "delta": total_delta,
+            "reason": reason_text,
             "old_bonuses": current_bonuses,
             "new_bonuses": new_bonuses,
             "spent_bonuses": user.spent_bonuses,
+            "services": [service.model_dump() for service in services] if services else None,
         },
         request=http_request,
     )
@@ -302,6 +413,11 @@ async def adjust_user_loyalty_bonuses(
         "user_id": user.id,
         "current_bonuses": new_bonuses,
         "spent_bonuses": user.spent_bonuses,
+        "bonuses_awarded": bonuses_awarded,
+        "bonuses_spent": bonuses_spent,
+        "loyalty_level_id": user.loyalty_level_id,
+        "loyalty_level_name": new_level.name if new_level else None,
+        "services": [service.model_dump() for service in services] if services else None,
     }
 
 
@@ -324,8 +440,16 @@ async def get_user_by_code(
             detail=f"Пользователь с кодом {unique_code} не найден"
         )
     
+    # Получаем уровень пользователя для расчета процента кэшбэка
+    from app.services.loyalty_service import _get_user_loyalty_level
+    user_level = _get_user_loyalty_level(db, user)
+    cashback_percent = user_level.cashback_percent if user_level else 1
+    
     from app.schemas.admin_users import AdminUserResponse
-    return AdminUserResponse.model_validate(user)
+    user_data = AdminUserResponse.model_validate(user)
+    # Добавляем cashback_percent вручную, так как его нет в модели User
+    user_data.cashback_percent = cashback_percent
+    return user_data
 
 
 class LoyaltySettingsResponse(BaseModel):
@@ -336,7 +460,8 @@ class LoyaltySettingsResponse(BaseModel):
 
 class LoyaltySettingsUpdate(BaseModel):
     """Обновление настроек программы лояльности"""
-    points_per_100_rub: int
+    points_per_100_rub: int | None = None
+    loyalty_enabled: bool | None = None
 
 
 @router.get("/settings", response_model=LoyaltySettingsResponse)
@@ -365,27 +490,47 @@ async def update_loyalty_settings(
     """
     from app.core.config import settings
     
-    if payload.points_per_100_rub < 0:
+    updated_fields = {}
+
+    if payload.points_per_100_rub is not None:
+        if payload.points_per_100_rub < 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Количество баллов не может быть отрицательным"
+            )
+        old_value = settings.LOYALTY_POINTS_PER_100_RUB
+        settings.LOYALTY_POINTS_PER_100_RUB = payload.points_per_100_rub
+        updated_fields["points_per_100_rub"] = {
+            "old": old_value,
+            "new": payload.points_per_100_rub,
+        }
+
+    if payload.loyalty_enabled is not None:
+        old_enabled = settings.LOYALTY_ENABLED
+        settings.LOYALTY_ENABLED = payload.loyalty_enabled
+        updated_fields["loyalty_enabled"] = {
+            "old": old_enabled,
+            "new": payload.loyalty_enabled,
+        }
+
+    if not updated_fields:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Количество баллов не может быть отрицательным"
+            detail="Нет данных для обновления",
         )
-    
-    old_value = settings.LOYALTY_POINTS_PER_100_RUB
-    settings.LOYALTY_POINTS_PER_100_RUB = payload.points_per_100_rub
     
     logger.info(
         "Обновлены настройки лояльности",
         extra={
             "admin_id": admin.id,
-            "old_points_per_100": old_value,
-            "new_points_per_100": payload.points_per_100_rub,
+            **{key: value for key, value in updated_fields.items()},
         },
     )
     
     return {
         "success": True,
-        "points_per_100_rub": payload.points_per_100_rub,
+        "points_per_100_rub": settings.LOYALTY_POINTS_PER_100_RUB,
+        "loyalty_enabled": settings.LOYALTY_ENABLED,
         "note": "Изменения применены. После перезапуска сервера настройки вернутся к значениям из .env"
     }
 

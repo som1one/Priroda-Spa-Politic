@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import '../l10n/app_localizations.dart';
 
 import '../routes/route_names.dart';
 import '../theme/app_colors.dart';
@@ -17,17 +16,16 @@ class AppBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final items = [
       _BottomNavConfig(
         item: BottomNavItem.home,
-        label: l10n.home,
+        label: 'Главная',
         assetPath: 'assets/images/Navigation/home_page.svg',
         routeName: RouteNames.home,
       ),
       _BottomNavConfig(
         item: BottomNavItem.menu,
-        label: l10n.menu,
+        label: 'Меню',
         assetPath: 'assets/images/Navigation/menu_page.svg',
         routeName: RouteNames.menuSpa,
       ),
@@ -40,7 +38,7 @@ class AppBottomNav extends StatelessWidget {
       ),
       _BottomNavConfig(
         item: BottomNavItem.profile,
-        label: l10n.profile,
+        label: 'Профиль',
         assetPath: 'assets/images/Navigation/profile_page.svg',
         routeName: RouteNames.profile,
       ),

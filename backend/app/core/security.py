@@ -9,6 +9,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import settings
+from app.utils.timezone import moscow_now
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +40,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = moscow_now() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = moscow_now() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
 
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
@@ -51,7 +52,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 def create_refresh_token(data: dict) -> str:
     """Создание refresh токена"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = moscow_now() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
     encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt

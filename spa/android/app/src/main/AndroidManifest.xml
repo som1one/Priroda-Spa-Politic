@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.prirodaspa.app">
     <application
-        android:label="spa"
+        android:label="PRIRODA SPA"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -41,6 +41,15 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Разрешение для открытия URL через браузер -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="http" />
         </intent>
     </queries>
 </manifest>

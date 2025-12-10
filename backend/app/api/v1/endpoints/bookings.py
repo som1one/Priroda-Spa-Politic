@@ -5,7 +5,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
 from sqlalchemy.orm import Session
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List, Optional
 from app.core.database import get_db
 from app.core.dependencies import get_current_user
@@ -16,6 +16,7 @@ from app.schemas.booking import (
     BookingCreate, BookingUpdate, BookingResponse, BookingStatusEnum
 )
 from app.utils.email import send_booking_confirmation
+from app.utils.timezone import moscow_now
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 logger = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ async def create_booking(
         },
     )
 
-    if booking.appointment_datetime <= datetime.now(timezone.utc):
+    if booking.appointment_datetime <= moscow_now():
         logger.warning("Попытка создать бронирование в прошлом", extra={"user_id": current_user.id})
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -121,7 +122,7 @@ async def get_bookings(
     # Фильтр для предстоящих записей
     if upcoming_only:
         query = query.filter(
-            Booking.appointment_datetime >= datetime.now(),
+            Booking.appointment_datetime >= moscow_now(),
             Booking.status.in_([BookingStatus.PENDING, BookingStatus.CONFIRMED])
         )
     
@@ -232,7 +233,7 @@ async def update_booking(
     
     # Обработка отмены
     if booking_update.status == BookingStatusEnum.CANCELLED:
-        booking.cancelled_at = datetime.now(timezone.utc)
+        booking.cancelled_at = moscow_now()
         if booking_update.cancelled_reason:
             booking.cancelled_reason = booking_update.cancelled_reason
         

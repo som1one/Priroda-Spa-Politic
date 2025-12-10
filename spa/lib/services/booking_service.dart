@@ -101,5 +101,23 @@ class BookingService {
     
     return response;
   }
+
+  /// Отменить запись
+  Future<void> cancelBooking({
+    required int bookingId,
+    String? reason,
+  }) async {
+    final token = _authService.token;
+    if (token != null) {
+      _apiService.token = token;
+    }
+
+    final body = {
+      'status': 'cancelled',
+      'cancelled_reason': reason ?? 'Отменено пользователем',
+    };
+
+    await _apiService.put('/bookings/$bookingId', body);
+  }
 }
 

@@ -18,17 +18,33 @@ depends_on = None
 
 
 def upgrade():
-    # Создаем ENUM тип для типов блоков
+    bind = op.get_bind()
+
+    # 1. Убедиться, что тип ENUM существует (создаём один раз вручную)
+    exists = bind.execute(
+        sa.text("SELECT 1 FROM pg_type WHERE typname = 'contentblocktype'")
+    ).scalar()
+
+    if not exists:
+        enum_type = postgresql.ENUM(
+            'spa_travel',
+            'promotion',
+            'banner',
+            'custom',
+            name='contentblocktype',
+        )
+        enum_type.create(bind, checkfirst=False)
+
+    # 2. Тип для колонки, который НЕ будет пытаться делать CREATE TYPE ещё раз
     content_block_type_enum = postgresql.ENUM(
         'spa_travel',
         'promotion',
         'banner',
         'custom',
         name='contentblocktype',
-        create_type=True
+        create_type=False,
     )
-    content_block_type_enum.create(op.get_bind(), checkfirst=True)
-    
+
     # Создаем таблицу custom_content_blocks
     op.create_table(
         'custom_content_blocks',
@@ -56,6 +72,6 @@ def upgrade():
 def downgrade():
     op.drop_index(op.f('ix_custom_content_blocks_id'), table_name='custom_content_blocks')
     op.drop_table('custom_content_blocks')
-    # Удаляем ENUM тип
+    # Удаляем ENUM тип (если больше нигде не используется)
     sa.Enum(name='contentblocktype').drop(op.get_bind(), checkfirst=True)
 

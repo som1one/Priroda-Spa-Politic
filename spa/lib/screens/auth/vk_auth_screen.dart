@@ -163,7 +163,7 @@ class _VkAuthScreenState extends State<VkAuthScreen> {
           }
         }
       } catch (e) {
-        print('Ошибка получения данных пользователя VK: $e');
+        // Ошибка получения данных пользователя VK
         // Продолжаем без дополнительных данных
       }
 

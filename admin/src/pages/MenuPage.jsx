@@ -18,6 +18,7 @@ import {
   Upload,
   message,
 } from 'antd';
+import { useAuth } from '../context/AuthContext';
 import {
   DeleteOutlined,
   EditOutlined,
@@ -50,6 +51,8 @@ const emptyCategory = {
 };
 
 const MenuPage = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -199,15 +202,15 @@ const MenuPage = () => {
         key={service.id}
         className={`menu-service-card${checked ? ' menu-service-card--selected' : ''}`}
         cover={service.image_url ? <div className="menu-service-cover" style={{ backgroundImage: `url(${service.image_url})` }} /> : null}
-        actions={[
+        actions={isSuperAdmin ? [
           <Button type="link" onClick={() => openServiceModal('edit', service.category_id ?? serviceModal.categoryId, service)}>
             Редактировать
           </Button>,
           <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDeleteService(service)} />,
-        ]}
+        ] : []}
       >
         <div className="menu-service-header">
-          {selectionMode && (
+          {isSuperAdmin && selectionMode && (
             <Checkbox
               checked={checked}
               onChange={(e) => toggleServiceSelection(service.id, e.target.checked)}
@@ -228,11 +231,11 @@ const MenuPage = () => {
             {service.duration && <Tag>{`${service.duration} мин.`}</Tag>}
             <Tag
               color={service.is_active === false ? 'default' : 'green'}
-              onClick={(e) => {
+              onClick={isSuperAdmin ? (e) => {
                 e.stopPropagation();
                 handleToggleServiceActive(service);
-              }}
-              style={{ cursor: 'pointer' }}
+              } : undefined}
+              style={{ cursor: isSuperAdmin ? 'pointer' : 'default' }}
             >
               {service.is_active === false ? 'Скрыта' : 'Показывается'}
             </Tag>
@@ -340,6 +343,7 @@ const MenuPage = () => {
   };
 
   const handleDragEnd = async (result) => {
+    if (!isSuperAdmin) return;
     if (!result.destination || result.destination.index === result.source.index) return;
     if (result.type === 'categories') {
       const parentId = extractParentId(result.source.droppableId);
@@ -383,13 +387,15 @@ const MenuPage = () => {
             <Title level={3} style={{ marginBottom: 0 }}>SPA-меню</Title>
             <Text type="secondary">Разделы, подразделы и услуги мобильного приложения</Text>
           </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openCategoryModal('create')}
-          >
-            Новый раздел
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openCategoryModal('create')}
+            >
+              Новый раздел
+            </Button>
+          )}
         </div>
 
       {loading ? (
@@ -413,7 +419,7 @@ const MenuPage = () => {
                   key={category.id ?? `uncategorized-${index}`} 
                   draggableId={`category-${category.id ?? `uncategorized-${index}`}`} 
                   index={index}
-                  isDragDisabled={isUncategorized} // Нельзя перетаскивать виртуальную категорию
+                  isDragDisabled={isUncategorized || !isSuperAdmin} // Нельзя перетаскивать виртуальную категорию или без прав
                 >
                   {(dragProvided) => (
                     <Card
@@ -437,10 +443,10 @@ const MenuPage = () => {
                         }
                         clearSelections();
                       }}
-                      actions={isUncategorized ? [] : [
+                      actions={isSuperAdmin && !isUncategorized ? [
                         <Button type="text" icon={<EditOutlined />} onClick={(e) => { e.stopPropagation(); openCategoryModal('edit', null, category); }} />,
                         <Button danger type="text" icon={<DeleteOutlined />} onClick={(e) => { e.stopPropagation(); handleDeleteCategory(category); }} />,
-                      ]}
+                      ] : []}
                     >
                       <Title level={5}>{category.name}</Title>
                       <Space direction="vertical" size={2}>
@@ -493,7 +499,7 @@ const MenuPage = () => {
         }}
         open={!!selectedCategory}
         destroyOnClose
-        extra={selectedCategory && selectedCategory.id && (
+        extra={isSuperAdmin && selectedCategory && selectedCategory.id && (
           <Space>
             <Button onClick={() => openCategoryModal('edit', null, selectedCategory)} icon={<EditOutlined />}>
               Редактировать
@@ -517,29 +523,31 @@ const MenuPage = () => {
               </>
             )}
 
-            <div className="category-actions">
-              {selectedCategory.id && (
-                <Button icon={<PlusOutlined />} onClick={() => openCategoryModal('create', selectedCategory.id)}>
-                  Подраздел
+            {isSuperAdmin && (
+              <div className="category-actions">
+                {selectedCategory.id && (
+                  <Button icon={<PlusOutlined />} onClick={() => openCategoryModal('create', selectedCategory.id)}>
+                    Подраздел
+                  </Button>
+                )}
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => openServiceModal('create', selectedCategory.id)}
+                >
+                  Услугу
                 </Button>
-              )}
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => openServiceModal('create', selectedCategory.id)}
-              >
-                Услугу
-              </Button>
-              <Button
-                type={selectionMode ? 'default' : 'dashed'}
-                onClick={() => {
-                  setSelectionMode((prev) => !prev);
-                  setSelectedServices([]);
-                }}
-              >
-                {selectionMode ? 'Отмена выбора' : 'Выбрать услуги'}
-              </Button>
-            </div>
+                <Button
+                  type={selectionMode ? 'default' : 'dashed'}
+                  onClick={() => {
+                    setSelectionMode((prev) => !prev);
+                    setSelectedServices([]);
+                  }}
+                >
+                  {selectionMode ? 'Отмена выбора' : 'Выбрать услуги'}
+                </Button>
+              </div>
+            )}
 
             {selectedCategory.id && (
               <>
@@ -566,11 +574,11 @@ const MenuPage = () => {
                                 <Text>Нет изображения</Text>
                               </div>
                             )}
-                            actions={[
+                            actions={isSuperAdmin ? [
                               <Button type="text" icon={<EditOutlined />} onClick={() => openCategoryModal('edit', selectedCategory.id, child)} />,
                               <Button danger type="text" icon={<DeleteOutlined />} onClick={() => handleDeleteCategory(child)} />,
                               <Button type="text" icon={<PlusOutlined />} onClick={() => openServiceModal('create', child.id)}>Услуга</Button>,
-                            ]}
+                            ] : []}
                           >
                             <Title level={5}>{child.name}</Title>
                             <Text type="secondary">
@@ -592,7 +600,7 @@ const MenuPage = () => {
 
             <Divider />
             <Title level={5}>Услуги</Title>
-            {selectionMode && (
+            {isSuperAdmin && selectionMode && (
               <div className="bulk-actions">
                 <Text strong>
                   {selectedServices.length > 0

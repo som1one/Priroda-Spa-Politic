@@ -122,8 +122,9 @@ async def root():
 async def health_check():
     """Health check endpoint"""
     logger.info("Обработан запрос GET /health")
+    from app.utils.timezone import moscow_now
     return {
         "status": "healthy",
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": moscow_now().isoformat(),
     }
 

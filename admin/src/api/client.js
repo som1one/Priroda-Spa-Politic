@@ -1,12 +1,12 @@
 import axios from 'axios';
 
 // Базовый URL API бэкенда.
-// По умолчанию используем локальный сервер на порту 9002:
-//   http://127.0.0.1:9002/api/v1
-// В production/на сервере укажи VITE_API_BASE_URL в .env, например:
+// В production/на сервере укажи VITE_API_BASE_URL в .env / docker-compose, например:
 //   VITE_API_BASE_URL=https://api.priroda-spa.ru/api/v1
+// По умолчанию (если переменная не задана) подключаемся к прод-серверу:
+//   http://194.87.187.146:9003/api/v1
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:9003/api/v1';
+  import.meta.env.VITE_API_BASE_URL ?? 'http://194.87.187.146:9003/api/v1';
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,

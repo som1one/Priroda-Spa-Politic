@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class AdminUserResponse(BaseModel):
@@ -12,15 +12,17 @@ class AdminUserResponse(BaseModel):
     phone: Optional[str]
     is_active: bool
     is_verified: bool
-    loyalty_level: Optional[int]
+    loyalty_level: Optional[int] = Field(None, alias="loyalty_level_id")
     loyalty_bonuses: Optional[int] = None
     spent_bonuses: Optional[int] = None
     unique_code: Optional[str] = None
     auto_apply_loyalty_points: bool = False
     created_at: datetime
+    cashback_percent: Optional[int] = None  # Процент кэшбэка текущего уровня (для расчета начисления)
 
     class Config:
         from_attributes = True
+        populate_by_name = True
 
 
 class AdminUsersListResponse(BaseModel):

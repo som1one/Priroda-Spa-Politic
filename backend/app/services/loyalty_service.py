@@ -3,6 +3,7 @@
 """
 import logging
 from typing import Optional
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -14,18 +15,43 @@ from app.models.loyalty import LoyaltyLevel
 logger = logging.getLogger(__name__)
 
 
+def _get_user_total_spent_cents(db: Session, user: User) -> int:
+    """
+    Рассчитать фактические траты пользователя в копейках.
+    Суммируем стоимость завершённых записей (COMPLETED).
+    В поле service_price хранится итоговая цена после списания бонусов,
+    поэтому траты не включают оплаченные бонусами суммы — это и требуется.
+    """
+    total = (
+        db.query(Booking)
+        .filter(
+            Booking.user_id == user.id,
+            Booking.status == BookingStatus.COMPLETED,
+            Booking.service_price.isnot(None),
+        )
+        .with_entities(Booking.service_price)
+        .all()
+    )
+    return sum((row[0] or 0) for row in total)
+
+
 def _get_user_loyalty_level(db: Session, user: User) -> Optional[LoyaltyLevel]:
     """
-    Получить текущий уровень лояльности пользователя на основе его бонусов.
+    Получить текущий уровень лояльности пользователя на основе его трат (в рублях).
+    Порог уровня берём из LoyaltyLevel.min_bonuses, интерпретируя это как минимальные траты в рублях.
     """
-    if not user.loyalty_bonuses or user.loyalty_bonuses <= 0:
-        # Если бонусов нет, возвращаем первый уровень (0 бонусов)
+    # Считаем траты пользователя (в копейках)
+    total_spent_cents = _get_user_total_spent_cents(db, user)
+    total_spent_rub = total_spent_cents // 100
+
+    # Если трат нет — возвращаем уровень с порогом 0
+    if total_spent_rub <= 0:
         return db.query(LoyaltyLevel).filter(LoyaltyLevel.min_bonuses == 0).first()
-    
-    # Находим самый высокий уровень, на который хватает бонусов
+
+    # Находим самый высокий уровень, на который хватает трат
     level = (
         db.query(LoyaltyLevel)
-        .filter(LoyaltyLevel.min_bonuses <= user.loyalty_bonuses)
+        .filter(LoyaltyLevel.min_bonuses <= total_spent_rub)
         .filter(LoyaltyLevel.is_active == True)
         .order_by(LoyaltyLevel.min_bonuses.desc())
         .first()
@@ -53,8 +79,8 @@ def _calculate_bonuses(db: Session, user: User, service_price_cents: Optional[in
     # Получаем текущий уровень пользователя
     level = _get_user_loyalty_level(db, user)
     if not level:
-        # Если уровня нет, используем минимальный процент (3% для 1 уровня)
-        cashback_percent = 3
+        # Если уровня нет, используем минимальный процент (1% для 0 уровня)
+        cashback_percent = 1
     else:
         cashback_percent = level.cashback_percent
 
@@ -106,7 +132,7 @@ def award_loyalty_for_booking(db: Session, user: User, booking: Booking) -> None
             "user_id": user.id,
             "booking_id": booking.id,
             "bonuses": bonuses,
-            "cashback_percent": new_level.cashback_percent if new_level else 3,
+            "cashback_percent": new_level.cashback_percent if new_level else 1,
             "total_bonuses": user.loyalty_bonuses,
         },
     )

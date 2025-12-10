@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -13,9 +14,16 @@ import '../../models/custom_content.dart';
 import '../../services/user_service.dart';
 import '../../services/loyalty_service.dart';
 import '../../services/custom_content_service.dart';
+import '../../services/booking_tracker_service.dart';
+import '../../services/local_booking_service.dart';
+import '../../services/api_service.dart';
+import '../../services/auth_service.dart';
+import '../../utils/api_exceptions.dart';
 import '../../utils/helpers.dart';
 import '../../widgets/popular_journey_carousel.dart';
 import '../../widgets/app_bottom_nav.dart';
+import '../../widgets/booking_confirmation_dialog.dart';
+import '../../widgets/booking_details_sheet.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,23 +32,240 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _userService = UserService();
   final _loyaltyService = LoyaltyService();
   final _customContentService = CustomContentService();
+  final _bookingTracker = BookingTrackerService();
+  final _localBookingService = LocalBookingService();
+  final _apiService = ApiService();
+  final _authService = AuthService();
   User? _user;
   bool _isLoadingUser = true;
   LoyaltyInfo? _loyaltyInfo;
   bool _isLoadingLoyalty = true;
   List<CustomContentBlock> _customBlocks = [];
   bool _isLoadingCustomBlocks = true;
+  bool _hasCheckedBooking = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUser();
     _loadLoyalty();
     _loadCustomBlocks();
+    // Проверяем при первой загрузке
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkPendingBooking();
+      // Убрано автоматическое предложение даты - пользователь сам решит, когда создавать запись
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Когда приложение возвращается в активное состояние
+    if (state == AppLifecycleState.resumed) {
+      _checkPendingBooking();
+      // Убрано автоматическое предложение даты - пользователь сам решит, когда создавать запись
+    }
+  }
+
+  Future<void> _checkPendingBooking() async {
+    if (_hasCheckedBooking) return;
+    
+    final pendingBooking = await _bookingTracker.getPendingBooking();
+    if (pendingBooking == null || !mounted) return;
+
+    _hasCheckedBooking = true;
+    
+    // Небольшая задержка, чтобы UI успел загрузиться
+    await Future.delayed(const Duration(milliseconds: 500));
+    
+    if (!mounted) return;
+
+    final serviceName = pendingBooking['service_name'] as String;
+    
+    BookingConfirmationDialog.show(
+      context: context,
+      serviceName: serviceName,
+      onConfirmed: () => _handleBookingConfirmed(pendingBooking),
+      onCancelled: () => _handleBookingCancelled(),
+      onSkip: () => _handleBookingSkipped(),
+    );
+  }
+
+
+
+  Future<void> _handleBookingConfirmed(Map<String, dynamic> pendingBooking) async {
+    try {
+      final bookingDetails = await BookingDetailsSheet.show(
+        context: context,
+        initialServiceName: pendingBooking['service_name'] as String,
+      );
+
+      if (!mounted || bookingDetails == null) {
+        return;
+      }
+
+      // Создаем запись о бронировании локально (без API)
+      // Используем выбранную дату и время, если указана, иначе текущая дата + 1 день, 10:00
+      final now = DateTime.now();
+      final appointmentDate = bookingDetails.appointmentDateTime ?? DateTime(
+        now.year,
+        now.month,
+        now.day + 1,
+        10,
+        0,
+      );
+      
+      final bookingData = {
+        'user_id': _user?.id ?? 0,
+        'service_name': bookingDetails.serviceName,
+        'appointment_datetime': appointmentDate.toIso8601String(),
+        'status': 'pending',
+        'notes': _composeLocalBookingNotes(bookingDetails),
+        'service_duration': null,
+        'service_price': (bookingDetails.priceRub * 100).round(),
+        'phone': _user?.phone,
+      };
+
+      if (bookingDetails.masterName != null && bookingDetails.masterName!.isNotEmpty) {
+        bookingData['master_name'] = bookingDetails.masterName;
+      }
+
+      // Сохраняем локально
+      await _localBookingService.saveLocalBooking(bookingData);
+      
+      // Очищаем трекер
+      await _bookingTracker.clearPendingBooking();
+      
+      // Обновляем данные пользователя
+      await _loadUser(forceRefresh: true);
+      
+      // Показываем сообщение о том, что запись сохранена
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Запись сохранена локально! Вы можете посмотреть её в профиле.'),
+          backgroundColor: AppColors.success,
+          duration: const Duration(seconds: 3),
+          action: SnackBarAction(
+            label: 'Открыть профиль',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.of(context).pushNamed(RouteNames.profile);
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при сохранении записи: ${getErrorMessage(e)}'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  String _composeLocalBookingNotes(BookingDetailsResult details) {
+    final parts = <String>[
+      'Забронировано через YClients',
+      'Сумма: ${details.priceRub.toStringAsFixed(0)} ₽',
+    ];
+
+    if (details.masterName != null && details.masterName!.isNotEmpty) {
+      parts.add('Мастер: ${details.masterName}');
+    }
+
+    return parts.join(' • ');
+  }
+
+  Future<void> _handleBookingCancelled() async {
+    try {
+      final pendingBooking = await _bookingTracker.getPendingBooking();
+      if (pendingBooking == null) {
+        await _bookingTracker.clearPendingBooking();
+        return;
+      }
+
+      final token = _authService.token;
+      if (token != null) {
+        _apiService.token = token;
+      }
+
+      // Создаем запись об отмене (со статусом cancelled)
+      // Используем текущую дату + 1 день как примерную дату записи
+      final now = DateTime.now().toUtc();
+      final appointmentDate = DateTime.utc(
+        now.year,
+        now.month,
+        now.day + 1,
+        10,
+        0,
+      );
+      
+      // Проверяем, что дата в будущем
+      if (appointmentDate.isBefore(now)) {
+        throw Exception('Неверная дата записи');
+      }
+      
+      final bookingData = {
+        'service_name': pendingBooking['service_name'] as String,
+        'appointment_datetime': appointmentDate.toIso8601String(),
+        'status': 'cancelled',
+        'cancelled_reason': 'Отменено пользователем при возврате из YClients',
+        'notes': 'Попытка бронирования через YClients - отменено',
+      };
+
+      await _apiService.post('/bookings', bookingData);
+      
+      // Очищаем трекер
+      await _bookingTracker.clearPendingBooking();
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Информация об отмене сохранена'),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Обновляем данные пользователя
+      await _loadUser(forceRefresh: true);
+    } catch (e) {
+      // Очищаем трекер даже при ошибке
+      await _bookingTracker.clearPendingBooking();
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка при сохранении информации об отмене: ${getErrorMessage(e)}'),
+          backgroundColor: AppColors.error,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
+  Future<void> _handleBookingSkipped() async {
+    // Просто очищаем трекер, ничего не делаем
+    await _bookingTracker.clearPendingBooking();
   }
 
   Future<void> _loadUser({bool forceRefresh = false}) async {
@@ -76,6 +301,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadCustomBlocks() async {
+    if (mounted) {
+      setState(() {
+        _isLoadingCustomBlocks = _customBlocks.isEmpty;
+      });
+    }
+
+    final cached = await _customContentService.getCachedBlocks();
+    if (cached.isNotEmpty && mounted) {
+      setState(() {
+        _customBlocks = cached;
+        _isLoadingCustomBlocks = false;
+      });
+    }
+
     try {
       final blocks = await _customContentService.getCustomContentBlocks();
       if (!mounted) return;
@@ -86,7 +325,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() {
-        _isLoadingCustomBlocks = false;
+        _isLoadingCustomBlocks = _customBlocks.isEmpty;
       });
     }
   }
@@ -338,6 +577,30 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // Определить номер уровня на основе бонусов
+  int _getLevelNumber(int bonuses) {
+    if (bonuses < 30000) return 1;
+    if (bonuses < 100000) return 2;
+    if (bonuses < 200000) return 3;
+    return 4;
+  }
+  
+  // Получить цвета градиента для уровня на основе цветов приложения
+  List<Color> _getLevelGradientColors(int levelNum) {
+    switch (levelNum) {
+      case 1:
+        return [AppColors.primary, AppColors.primaryLight];
+      case 2:
+        return [AppColors.primaryLight, AppColors.primary];
+      case 3:
+        return [AppColors.primary, AppColors.primaryDark];
+      case 4:
+        return [AppColors.primaryDark, AppColors.primaryDarker];
+      default:
+        return [AppColors.primary, AppColors.primaryLight];
+    }
+  }
+  
   Color _parseLoyaltyColor(String hex) {
     try {
       return Color(int.parse(hex.replaceFirst('#', ''), radix: 16) + 0xFF000000);
@@ -347,24 +610,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildLoyaltyCard() {
-    final level = _loyaltyInfo?.currentLevel;
     final currentBonuses = _loyaltyInfo?.currentBonuses ?? 0;
-    final levelName = level?.name ?? 'Начало пути';
+    final levelName = _loyaltyInfo?.currentLevel?.name ?? '0';
+    final levelNum = int.tryParse(levelName) ?? 0;
+    final displayLevelName = 'Уровень $levelName';
 
-    // Если есть данные уровня из backend, используем динамические цвета
-    final gradientColors = level != null
-        ? [
-            _parseLoyaltyColor(level.colorStart),
-            _parseLoyaltyColor(level.colorEnd),
-          ]
-        : [
-            AppColors.backgroundLight,
-            AppColors.white,
-          ];
-
-    final iconColor = level != null
-        ? _parseLoyaltyColor(level.colorStart)
-        : AppColors.buttonPrimary;
+    // Используем цвета из AppColors для градиента
+    final gradientColors = _getLevelGradientColors(levelNum);
+    final iconColor = AppColors.buttonPrimary;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(28, 24, 28, 0),
@@ -382,14 +635,12 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: level != null
-                  ? iconColor.withOpacity(0.3)
-                  : AppColors.borderLight,
+              color: AppColors.buttonPrimary.withOpacity(0.3),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: (level != null ? iconColor : AppColors.textPrimary).withOpacity(0.12),
+                color: AppColors.buttonPrimary.withOpacity(0.12),
                 blurRadius: 24,
                 offset: const Offset(0, 6),
               ),
@@ -402,18 +653,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 64,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: level != null
-                      ? AppColors.white.withOpacity(0.2)
-                      : iconColor.withOpacity(0.15),
-                  border: level != null
-                      ? Border.all(
-                          color: Colors.white.withOpacity(0.3),
-                          width: 2,
-                        )
-                      : null,
+                  color: AppColors.white.withOpacity(0.2),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.3),
+                    width: 2,
+                  ),
                   boxShadow: [
                     BoxShadow(
-                      color: (level != null ? Colors.white : iconColor).withOpacity(0.15),
+                      color: Colors.white.withOpacity(0.15),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -422,7 +669,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Center(
                   child: Icon(
                     Icons.workspace_premium,
-                    color: level != null ? Colors.white : iconColor,
+                    color: Colors.white,
                     size: 32,
                   ),
                 ),
@@ -439,9 +686,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         fontFamily: 'Inter24',
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: level != null
-                            ? AppColors.white.withOpacity(0.85)
-                            : AppColors.textSecondary,
+                        color: AppColors.white.withOpacity(0.85),
                         letterSpacing: 0.3,
                       ),
                     ),
@@ -452,9 +697,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: AppTextStyles.bodyMedium.copyWith(
                           fontFamily: 'Inter18',
                           fontSize: 14,
-                          color: level != null
-                              ? AppColors.white.withOpacity(0.7)
-                              : AppColors.textSecondary,
+                          color: AppColors.white.withOpacity(0.7),
                         ),
                       )
                     else
@@ -463,25 +706,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: AppTextStyles.bodyMedium.copyWith(
                             fontFamily: 'Inter24',
                             fontSize: 18,
-                            color: level != null ? AppColors.white : AppColors.textPrimary,
+                            color: AppColors.white,
                           ),
                           children: [
                             TextSpan(
-                              text: levelName,
+                              text: displayLevelName,
                               style: const TextStyle(
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: -0.3,
                               ),
                             ),
-                            if (level != null)
-                              TextSpan(
-                                text: '\n$currentBonuses бонусов',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.white.withOpacity(0.85),
-                                ),
+                            TextSpan(
+                              text: '\n$currentBonuses бонусов',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.white.withOpacity(0.85),
                               ),
+                            ),
                           ],
                         ),
                       ),
@@ -491,10 +733,8 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(width: 12),
               Icon(
                 Icons.arrow_forward_ios,
-                color: level != null
-                    ? AppColors.white.withOpacity(0.7)
-                    : AppColors.buttonPrimary.withOpacity(0.6),
-                size: 18,
+                color: AppColors.white.withOpacity(0.7),
+                size: 16,
               ),
             ],
           ),
@@ -506,15 +746,15 @@ class _HomeScreenState extends State<HomeScreen> {
   String _mapLevelToLabel(int level) {
     switch (level) {
       case 1:
-        return 'Новичок · Повышай свой уровень!';
+        return 'Уровень 1 · Начало пути';
       case 2:
-        return 'Silver · У тебя уже хороший прогресс';
+        return 'Уровень 2 · Хороший прогресс';
       case 3:
-        return 'Gold · Ещё чуть-чуть до премиум бонусов';
+        return 'Уровень 3 · Почти на максимуме';
       case 4:
-        return 'Platinum · Топовый статус почти твой';
+        return 'Уровень 4 · Максимальный уровень';
       default:
-        return 'Elite · Ты получаешь максимум привилегий';
+        return 'Уровень $level';
     }
   }
 

@@ -46,21 +46,20 @@ class AuthService:
                 detail="Пароль слишком длинный (максимум 72 байта)"
             )
         
-        verification_code = db.query(VerificationCode).filter(
-            VerificationCode.email == request.email,
-            VerificationCode.code == request.code,
-            VerificationCode.is_used == False,
-            VerificationCode.expires_at > datetime.utcnow()
-        ).first()
-
-        if not verification_code:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Неверный или истекший код подтверждения"
-            )
-        
-        # Создание пользователя
+        # Упрощенная регистрация: больше не требуем кода подтверждения.
+        # Оставляем проверку уникальности email и валидности пароля,
+        # а email сразу считаем подтверждённым.
         hashed_password = get_password_hash(request.password)
+
+        # Генерируем уникальный код пользователя (NOT NULL в БД, нужен для интеграций)
+        unique_code = None
+        for _ in range(10):  # до 10 попыток найти свободный код
+            candidate = secrets.token_urlsafe(6)[:8].upper().replace('-', '').replace('_', '')
+            exists = db.query(User).filter(User.unique_code == candidate).first()
+            if not exists:
+                unique_code = candidate
+                break
+
         user = User(
             name=request.name,
             surname=request.surname,
@@ -68,16 +67,13 @@ class AuthService:
             hashed_password=hashed_password,
             phone=request.phone,
             is_verified=True,
-            is_active=True
+            is_active=True,
+            unique_code=unique_code,
         )
-        
+
         db.add(user)
         db.commit()
         db.refresh(user)
-        
-        verification_code.is_used = True
-        verification_code.user_id = user.id
-        db.commit()
         
         return {
             "user_id": user.id,
@@ -86,6 +82,11 @@ class AuthService:
     
     @staticmethod
     async def request_verification_code(db: Session, email: str) -> dict:
+        """
+        Больше не отправляем код по email.
+        Оставляем только проверку, что пользователя ещё нет, чтобы не плодить дублей.
+        Фронт после этого шага сразу может вызывать /register с любым значением code.
+        """
         existing_user = db.query(User).filter(User.email == email).first()
         if existing_user:
             raise HTTPException(
@@ -93,30 +94,7 @@ class AuthService:
                 detail="Пользователь с таким email уже существует"
             )
 
-        db.query(VerificationCode).filter(
-            VerificationCode.email == email
-        ).delete()
-
-        code = AuthService.generate_verification_code()
-        expires_at = datetime.utcnow() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
-
-        verification_code = VerificationCode(
-            email=email,
-            code=code,
-            expires_at=expires_at
-        )
-
-        db.add(verification_code)
-        db.commit()
-
-        send_ok = await send_verification_code(email, code)
-        if not send_ok:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Не удалось отправить код подтверждения"
-            )
-
-        return {"message": "Код отправлен на email"}
+        return {"message": "Подтверждение email отключено, можно продолжать регистрацию"}
     
     @staticmethod
     async def login(db: Session, email: str, password: str) -> dict:
@@ -167,9 +145,10 @@ class AuthService:
             dict: {"message": str}
         """
         # Удаляем просроченные коды для этого email
+        from app.utils.timezone import moscow_now
         db.query(VerificationCode).filter(
             VerificationCode.email == email,
-            VerificationCode.expires_at < datetime.utcnow()
+            VerificationCode.expires_at < moscow_now()
         ).delete()
         db.commit()
         
@@ -188,6 +167,11 @@ class AuthService:
         
         # Активация аккаунта
         user = db.query(User).filter(User.id == verification_code.user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден"
+            )
         user.is_verified = True
         
         # Отмечаем код как использованный
@@ -200,48 +184,17 @@ class AuthService:
     @staticmethod
     async def resend_code(db: Session, email: str) -> dict:
         """
-        Повторная отправка кода подтверждения
-        
-        Returns:
-            dict: {"message": str}
+        Раньше отправляли код повторно на email.
+        Сейчас подтверждение email отключено, поэтому просто возвращаем сообщение.
         """
-        # Поиск пользователя
         user = db.query(User).filter(User.email == email).first()
         if not user:
-            return await AuthService.request_verification_code(db, email)
-        
-        if user.is_verified:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email уже подтвержден"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден"
             )
-        
-        db.query(VerificationCode).filter(
-            VerificationCode.email == email,
-            VerificationCode.is_used == False
-        ).update({"is_used": True})
-        
-        code = AuthService.generate_verification_code()
-        expires_at = datetime.utcnow() + timedelta(minutes=settings.VERIFICATION_CODE_EXPIRE_MINUTES)
-        
-        verification_code = VerificationCode(
-            email=email,
-            code=code,
-            user_id=user.id,
-            expires_at=expires_at
-        )
-        
-        db.add(verification_code)
-        db.commit()
-        
-        send_ok = await send_verification_code(email, code)
-        if not send_ok:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Не удалось отправить код подтверждения"
-            )
-        
+
         return {
-            "message": "Код отправлен повторно"
+            "message": "Подтверждение email отключено, повторная отправка кода не требуется"
         }
 

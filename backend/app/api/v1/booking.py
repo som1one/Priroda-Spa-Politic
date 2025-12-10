@@ -76,7 +76,8 @@ async def _generate_slots_from_staff_schedule(
                 continue
         
         # Проверяем, не прошло ли уже это время (для сегодняшнего дня)
-        if target_date == date.today() and current_time <= datetime.now():
+        from app.utils.timezone import moscow_now
+        if target_date == date.today() and current_time <= moscow_now().time():
             current_time += timedelta(minutes=slot_interval)
             continue
         
@@ -351,7 +352,8 @@ async def get_available_days(
             if schedule:
                 # Проверяем, не прошло ли уже время (для сегодняшнего дня)
                 if check_date == today:
-                    current_time = datetime.now().time()
+                    from app.utils.timezone import moscow_now
+                    current_time = moscow_now().time()
                     if current_time < schedule.end_time:
                         result.append(check_date.strftime("%Y-%m-%d"))
                 else:
