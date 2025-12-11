@@ -3,6 +3,7 @@ workflows:
     name: iOS Workflow
     max_build_duration: 120
     instance_type: mac_mini_m1
+    working_directory: spa
     environment:
       flutter: stable
       xcode: latest
@@ -16,22 +17,20 @@ workflows:
     scripts:
       - name: Get Flutter dependencies
         script: |
-          cd spa
           flutter pub get
       
       - name: Install CocoaPods dependencies
         script: |
-          cd spa/ios
+          cd ios
           pod install
       
       - name: Build iOS
         script: |
-          cd spa
           flutter build ipa --release \
             --export-options-plist=ios/ExportOptions.plist
     
     artifacts:
-      - spa/build/ios/ipa/*.ipa
+      - build/ios/ipa/*.ipa
     
     publishing:
       email:
