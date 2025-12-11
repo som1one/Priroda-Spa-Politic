@@ -10,42 +10,28 @@ workflows:
       xcode: latest
       cocoapods: default
       groups:
-        - app_store_credentials   # Тут лежит твой API key
+        - app_store_credentials    # здесь твой APP_STORE_KEY, KEY_ID, ISSUER_ID
       vars:
         BUNDLE_ID: com.prirodaspa.app
 
     scripts:
       - name: Install Flutter dependencies
-        script: |
-          flutter pub get
+        script: flutter pub get
 
       - name: Install CocoaPods
         script: |
           cd ios
           pod install
 
-      - name: Build iOS release IPA
+      - name: Build IPA
         script: |
-          flutter build ipa --release
-          echo "IPA build complete"
+          flutter build ipa --release \
+            --export-options-plist=export_options.plist
 
     artifacts:
       - build/ios/ipa/*.ipa
 
-    publishing:
-      email:
-        recipients:
-          - your-email@example.com
-        notify:
-          success: true
-          failure: true
-
-      # Автоматическая загрузка в TestFlight (опционально)
-      # app_store_connect:
-      #   auth:
-      #     issuer_id: $APP_STORE_ISSUER_ID
-      #     key_id: $APP_STORE_KEY_ID
-      #     key: $APP_STORE_PRIVATE_KEY
-      #   submit_to_testflight: true
-      #   beta_groups:
-      #     - Internal Testing
+    code_signing:
+      app_store_connect: true
+      bundle_identifier: com.prirodaspa.app
+      signing_type: app-store
