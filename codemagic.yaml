@@ -14,11 +14,6 @@ workflows:
         APP_ID: com.prirodaspa.app
         BUNDLE_ID: com.prirodaspa.app
     
-    # Автоматическая настройка code signing
-    code_signing:
-      # Используем App Store Connect API ключ из группы app_store_credentials
-      # Codemagic автоматически создаст сертификаты и provisioning profiles
-    
     scripts:
       - name: Get Flutter dependencies
         script: |
