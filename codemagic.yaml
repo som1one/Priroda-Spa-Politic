@@ -1,37 +1,37 @@
 workflows:
-  ios-workflow:
-    name: iOS Workflow
+  ios-release:
+    name: iOS Release Build
     max_build_duration: 120
     instance_type: mac_mini_m1
     working_directory: spa
+
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
       groups:
-        - app_store_credentials
+        - app_store_credentials   # Тут лежит твой API key
       vars:
-        APP_ID: com.prirodaspa.app
         BUNDLE_ID: com.prirodaspa.app
-    
+
     scripts:
-      - name: Get Flutter dependencies
+      - name: Install Flutter dependencies
         script: |
           flutter pub get
-      
-      - name: Install CocoaPods dependencies
+
+      - name: Install CocoaPods
         script: |
           cd ios
           pod install
-      
-      - name: Build iOS
+
+      - name: Build iOS release IPA
         script: |
-          flutter build ipa --release \
-            --export-options-plist=ios/ExportOptions.plist
-    
+          flutter build ipa --release
+          echo "IPA build complete"
+
     artifacts:
       - build/ios/ipa/*.ipa
-    
+
     publishing:
       email:
         recipients:
@@ -39,8 +39,8 @@ workflows:
         notify:
           success: true
           failure: true
-      
-      # Раскомментируйте для автоматической загрузки в TestFlight
+
+      # Автоматическая загрузка в TestFlight (опционально)
       # app_store_connect:
       #   auth:
       #     issuer_id: $APP_STORE_ISSUER_ID
@@ -49,4 +49,3 @@ workflows:
       #   submit_to_testflight: true
       #   beta_groups:
       #     - Internal Testing
-
