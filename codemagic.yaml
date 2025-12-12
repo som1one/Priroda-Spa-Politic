@@ -9,6 +9,8 @@ workflows:
       flutter: stable
       xcode: latest
       cocoapods: default
+      groups:
+        - app_store_credentials  # Группа с API ключами
 
     scripts:
       - name: Install deps
@@ -24,3 +26,15 @@ workflows:
 
     artifacts:
       - build/ios/ipa/*.ipa
+    
+    # Автоматическая подпись через App Store Connect API
+    # Codemagic автоматически создаст сертификаты используя переменные из app_store_credentials
+    code_signing:
+      ios:
+        # Используем автоматическую подпись через App Store Connect API
+        # Переменные должны быть в группе app_store_credentials:
+        # - APP_STORE_ISSUER_ID
+        # - APP_STORE_KEY_ID  
+        # - APP_STORE_PRIVATE_KEY
+        certificate_type: app_store
+        bundle_identifier: com.prirodaspa.app
