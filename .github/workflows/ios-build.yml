@@ -25,7 +25,16 @@ jobs:
     
     - name: Install CocoaPods dependencies
       working-directory: ./spa/ios
-      run: pod install
+      run: |
+        # Создаем Podfile если его нет, с минимальной версией iOS 13.0
+        if [ ! -f Podfile ]; then
+          echo "platform :ios, '13.0'" > Podfile
+          echo "use_frameworks!" >> Podfile
+          echo "use_modular_headers!" >> Podfile
+        fi
+        # Обновляем минимальную версию в Podfile если она указана
+        sed -i '' "s/platform :ios, '[0-9.]*'/platform :ios, '13.0'/" Podfile || sed -i "s/platform :ios, '[0-9.]*'/platform :ios, '13.0'/" Podfile
+        pod install
     
     - name: Setup certificates (Manual Signing)
       env:
