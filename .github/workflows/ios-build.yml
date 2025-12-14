@@ -49,27 +49,55 @@ jobs:
           exit 0
         fi
         
+        # Проверяем наличие пароля
+        if [ -z "$P12_PASSWORD" ]; then
+          echo "❌ Error: APPLE_CERTIFICATE_PASSWORD secret is not set"
+          exit 1
+        fi
+        
         # Создание keychain
         security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
         security default-keychain -s build.keychain
         security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
         security set-keychain-settings -t 3600 -u build.keychain
 
-        # Импорт сертификата
-        echo "$BUILD_CERTIFICATE_BASE64" | base64 --decode > certificate.p12
-        security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign || true
+        # Декодируем сертификат (убираем возможные пробелы и переносы строк)
+        echo "$BUILD_CERTIFICATE_BASE64" | tr -d '\n\r ' | base64 --decode > certificate.p12
+        
+        # Проверяем, что файл создан
+        if [ ! -f certificate.p12 ] || [ ! -s certificate.p12 ]; then
+          echo "❌ Error: Failed to decode certificate.p12"
+          exit 1
+        fi
+        
+        # Импорт сертификата с проверкой ошибок
+        echo "Importing certificate..."
+        if ! security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign 2>&1; then
+          echo "❌ Error: Failed to import certificate. Check if APPLE_CERTIFICATE_PASSWORD is correct."
+          exit 1
+        fi
+        
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain || true
 
         # Импорт provisioning profile
-        echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
+        echo "$PROVISIONING_PROFILE_BASE64" | tr -d '\n\r ' | base64 --decode > profile.mobileprovision
+        
+        # Проверяем, что файл создан
+        if [ ! -f profile.mobileprovision ] || [ ! -s profile.mobileprovision ]; then
+          echo "❌ Error: Failed to decode profile.mobileprovision"
+          exit 1
+        fi
+        
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
         
         # Получаем UUID профиля
         UUID=$(grep -aA1 UUID profile.mobileprovision | grep -o '[-A-F0-9]\{36\}')
-        cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+        if [ -n "$UUID" ]; then
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+        fi
         
-        echo "✅ Certificates installed"
+        echo "✅ Certificates installed successfully"
         ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
 
     - name: Build iOS IPA
