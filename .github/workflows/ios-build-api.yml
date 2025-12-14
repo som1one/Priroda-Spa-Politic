@@ -28,7 +28,6 @@ jobs:
       run: pod install
     
     - name: Setup App Store Connect API authentication
-      if: secrets.APP_STORE_ISSUER_ID != ''
       env:
         APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
         APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
