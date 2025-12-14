@@ -1,0 +1,67 @@
+name: iOS Build (App Store Connect API)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:  # Позволяет запускать вручную
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Flutter
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: '3.24.0'
+        channel: 'stable'
+    
+    - name: Get Flutter dependencies
+      working-directory: ./spa
+      run: flutter pub get
+    
+    - name: Install CocoaPods dependencies
+      working-directory: ./spa/ios
+      run: pod install
+    
+    - name: Setup App Store Connect API authentication
+      if: ${{ secrets.APP_STORE_ISSUER_ID != '' }}
+      env:
+        APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
+        APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
+        APP_STORE_PRIVATE_KEY: ${{ secrets.APP_STORE_PRIVATE_KEY }}
+      run: |
+        # Создаем директорию для ключа
+        mkdir -p ~/private_keys
+        
+        # Сохраняем приватный ключ
+        echo "$APP_STORE_PRIVATE_KEY" > ~/private_keys/AuthKey_${APP_STORE_KEY_ID}.p8
+        
+        # Устанавливаем права доступа
+        chmod 600 ~/private_keys/AuthKey_${APP_STORE_KEY_ID}.p8
+        
+        echo "✅ App Store Connect API key configured"
+    
+    - name: Build iOS IPA (Automatic Signing)
+      working-directory: ./spa
+      env:
+        APP_STORE_ISSUER_ID: ${{ secrets.APP_STORE_ISSUER_ID }}
+        APP_STORE_KEY_ID: ${{ secrets.APP_STORE_KEY_ID }}
+        APP_STORE_PRIVATE_KEY: ${{ secrets.APP_STORE_PRIVATE_KEY }}
+      run: |
+        # Используем автоматическую подпись через App Store Connect API
+        flutter build ipa --release \
+          --build-number=$(date +%s) \
+          --export-options-plist=ios/ExportOptions.plist || \
+        flutter build ipa --release
+    
+    - name: Upload IPA artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-ipa-api
+        path: spa/build/ios/ipa/*.ipa
+        retention-days: 30
+

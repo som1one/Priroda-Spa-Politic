@@ -3,9 +3,7 @@ name: iOS Build
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+  workflow_dispatch:  # Позволяет запускать вручную
 
 jobs:
   build:
@@ -13,7 +11,7 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
@@ -29,7 +27,7 @@ jobs:
       working-directory: ./spa/ios
       run: pod install
     
-    - name: Setup certificates
+    - name: Setup certificates (Manual Signing)
       if: ${{ secrets.APPLE_CERTIFICATE_BASE64 != '' }}
       env:
         BUILD_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
@@ -52,14 +50,20 @@ jobs:
         echo "$PROVISIONING_PROFILE_BASE64" | base64 --decode > profile.mobileprovision
         mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
         cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
-        ls ~/Library/MobileDevice/Provisioning\ Profiles/
+        
+        # Получаем UUID профиля
+        UUID=$(grep -aA1 UUID profile.mobileprovision | grep -o '[-A-F0-9]\{36\}')
+        cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/$UUID.mobileprovision
+        
+        echo "✅ Certificates installed"
+        ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
 
     - name: Build iOS IPA
       working-directory: ./spa
       run: flutter build ipa --release
     
     - name: Upload IPA artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ios-ipa
         path: spa/build/ios/ipa/*.ipa
