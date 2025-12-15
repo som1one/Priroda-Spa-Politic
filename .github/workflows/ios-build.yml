@@ -67,15 +67,35 @@ jobs:
         # Проверяем, что файл создан
         if [ ! -f certificate.p12 ] || [ ! -s certificate.p12 ]; then
           echo "❌ Error: Failed to decode certificate.p12"
+          echo "Base64 length: ${#BUILD_CERTIFICATE_BASE64}"
+          exit 1
+        fi
+        
+        # Проверяем размер файла
+        FILE_SIZE=$(stat -f%z certificate.p12 2>/dev/null || stat -c%s certificate.p12 2>/dev/null || echo "0")
+        echo "Certificate file size: $FILE_SIZE bytes"
+        if [ "$FILE_SIZE" -lt 1000 ]; then
+          echo "❌ Error: certificate.p12 file is too small, base64 might be incorrect"
           exit 1
         fi
         
         # Импорт сертификата с проверкой ошибок
-        echo "Importing certificate..."
-        if ! security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign 2>&1; then
-          echo "❌ Error: Failed to import certificate. Check if APPLE_CERTIFICATE_PASSWORD is correct."
+        echo "Importing certificate with password length: ${#P12_PASSWORD}"
+        IMPORT_OUTPUT=$(security import certificate.p12 -k build.keychain -P "$P12_PASSWORD" -T /usr/bin/codesign 2>&1)
+        IMPORT_EXIT=$?
+        
+        if [ $IMPORT_EXIT -ne 0 ]; then
+          echo "❌ Error: Failed to import certificate"
+          echo "Import output: $IMPORT_OUTPUT"
+          echo ""
+          echo "Troubleshooting:"
+          echo "1. Check that APPLE_CERTIFICATE_PASSWORD is exactly: prirodaspa2018"
+          echo "2. Check that APPLE_CERTIFICATE_BASE64 contains the full base64 string"
+          echo "3. Make sure there are no extra spaces or line breaks in the secrets"
           exit 1
         fi
+        
+        echo "✅ Certificate imported successfully"
         
         security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain || true
 
