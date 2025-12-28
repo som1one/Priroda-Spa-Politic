@@ -1,4 +1,4 @@
-# 🔍 Диагностика ошибки "MAC verification failed"
+я# 🔍 Диагностика ошибки "MAC verification failed"
 
 ## ❌ Проблема:
 ```
