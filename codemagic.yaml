@@ -31,9 +31,9 @@
           VERSION_NAME=$(echo "$VERSION_LINE" | sed 's/version: //' | sed 's/+.*//')
           BUILD_NUMBER=$(echo "$VERSION_LINE" | sed 's/.*+//')
           
-          # Убеждаемся, что build number минимум 11 (выше предыдущей версии 10)
-          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -lt 11 ]; then
-            BUILD_NUMBER=11
+          # Убеждаемся, что build number минимум 13 (выше предыдущей версии 12)
+          if [ -z "$BUILD_NUMBER" ] || [ "$BUILD_NUMBER" -lt 13 ]; then
+            BUILD_NUMBER=13
           fi
           
           echo "Using VERSION_NAME=$VERSION_NAME"
